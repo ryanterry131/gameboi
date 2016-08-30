@@ -238,7 +238,7 @@
     "SBC A,d8",
     "RST 18H",
     //0xE0
-    "LDH (a8),A",
+    "LD ($FF00+a8),A",
     "POP HL",
     "LD (C),A",
     "UNDEFINED",
@@ -270,5 +270,9 @@
     "UNDEFINED",
     "UNDEFINED",
     "CP d8",
-    "RST 38H"
+    "RST 38H",
+    
+    
+    // EXTENDED INSTRUCTIONS
+    "UNDEFINED"
 };

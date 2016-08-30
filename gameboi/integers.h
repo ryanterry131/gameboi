@@ -11,6 +11,15 @@
 
 #include <stdint.h>
 
+#define FLAG_ZERO_MASK          0b10000000
+#define FLAG_ZERO_SHIFT         0x00000007
+#define FLAG_NEGATIVE_MASK      0b01000000
+#define FLAG_NEGATIVE_SHIFT     0x00000006
+#define FLAG_HALFCARRY_MASK     0b00100000
+#define FLAG_HALFCARRY_SHIFT    0x00000005
+#define FLAG_CARRY_MASK         0b00010000
+#define FLAG_CARRY_SHIFT        0x00000004
+
 typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;

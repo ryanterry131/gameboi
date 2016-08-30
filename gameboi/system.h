@@ -43,6 +43,7 @@ void gb_system_loop();
 
 BOOL gb_system_validate_rom_checksum();
 void gb_system_swap_bank(u8* bank_ptr, int bank);
+BOOL gb_system_load_map_bootrom(int, int);
 
 void gb_system_shutdown();
 

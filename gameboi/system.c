@@ -46,7 +46,14 @@ BOOL gb_system_boot()
     gb_system_swap_bank(gameboy->rom_bank0, 0);
     gb_system_swap_bank(gameboy->rom_bank1, 1);
     
-    gameboy->cpu->reg_PC = 0x0100;
+    if(!gb_system_load_map_bootrom(0x0000, 0x256))
+    {
+        printf("Internal bootrom not yet implemented! Aborting...\n");
+        //gb_system_internal_bootstrap();
+        return FALSE;
+    }
+    
+    gameboy->cpu->reg_PC = 0x0000;
     
     gb_core_initialize();
     gb_audio_initialize();
@@ -90,6 +97,23 @@ BOOL gb_system_validate_rom_checksum()
 void gb_system_swap_bank(u8* bank_ptr, int bank)
 {
     memcpy(bank_ptr, gameboy->current_rom->rawBytes + (bank * GAMEBOY_ROM_BANK_SIZE), GAMEBOY_ROM_BANK_SIZE);
+}
+
+BOOL gb_system_load_map_bootrom(int map_addr, int bootrom_size)
+{
+    const char* bootrom_path = "/Users/ryan/Downloads/bootrom.bin";
+    FILE* bootrom = fopen(bootrom_path, "rb");
+    
+    if(!bootrom)
+    {
+        printf("Bootrom image invalid!\n");
+        return FALSE;
+    }
+    
+    fread(gameboy->memory_map + map_addr, bootrom_size, 1, bootrom);
+    
+    fclose(bootrom);
+    return TRUE;
 }
 
 void gb_system_shutdown()
