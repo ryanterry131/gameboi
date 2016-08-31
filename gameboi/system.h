@@ -9,21 +9,30 @@
 #ifndef system_h
 #define system_h
 
-#define GAMEBOY_MEMORY_SIZE 0x10000
-#define GAMEBOY_ROM_BANK_SIZE 0x4000
+#define GAMEBOY_MEMORY_SIZE         0x10000
+#define GAMEBOY_ROM_BANK_SIZE       0x4000
+
+#define INTERRUPT_REQUEST_ADDR      0xFF0F
+#define INTERRUPT_ENABLED_ADDR      0xFFFF
+
+#define INTERRUPT_VBLANK_MASK       0b00000001
+#define INTERRUPT_LCDC_MASK         0b00000010
+#define INTERRUPT_TIMER_MASK        0b00000100
+#define INTERRUPT_SERIAL_MASK       0b00001000
+#define INTERRUPT_CONTROLLER_MASK   0b00010000
 
 #include <stdio.h>
 
-struct z80;
+struct gb_cpu;
 struct gb_rom;
 #include "integers.h"
 
-extern BOOL gb_system_stopped;
-
 struct gb_system
 {
-    struct z80* cpu;
+    struct gb_cpu* cpu;
     struct gb_rom* current_rom;
+    
+    BOOL stopped;
     
     u8* memory_map;
     u8* rom_bank0;      // 0x0000
@@ -40,6 +49,13 @@ extern struct gb_system* gameboy;
 
 BOOL gb_system_boot();
 void gb_system_loop();
+
+void gb_tick_delayed_interrupts();
+void gb_service_interrupts();
+void gb_set_interrupt(u8, BOOL);
+BOOL gb_interrupts_requested();
+BOOL gb_interrupt_requested(u8);
+BOOL gb_interrupt_enabled(u8);
 
 BOOL gb_system_validate_rom_checksum();
 void gb_system_swap_bank(u8* bank_ptr, int bank);

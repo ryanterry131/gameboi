@@ -16,12 +16,12 @@
 #include "renderer.h"
 
 struct gb_system* gameboy;
-BOOL gb_system_stopped = FALSE;
 
 BOOL gb_system_boot()
 {
     gameboy = (struct gb_system*) malloc(sizeof(struct gb_system));
-    gameboy->cpu = (struct z80*) malloc(sizeof(struct z80));
+    gameboy->cpu = (struct gb_cpu*) malloc(sizeof(struct gb_cpu));
+    gameboy->stopped = FALSE;
     
     {
         // setup memory pages
@@ -67,8 +67,98 @@ BOOL gb_system_boot()
 */
 void gb_system_loop()
 {
+    gb_service_interrupts();
+
     cpu_execute(gameboy->cpu->reg_PC);
+    
+    gb_tick_delayed_interrupts();
 }
+
+/*
+ * ---------------- INTERRUPTS ----------------
+*/
+
+void gb_tick_delayed_interrupts()
+{
+    // TODO
+}
+
+void gb_service_interrupts()
+{
+    if(gameboy->cpu->IME)
+    {
+        u16 interrupt_handler_addr = 0x0000;
+        u8 prioritized_interrupt = 0b00000000;
+
+        if(gb_interrupts_requested())
+        {
+            // If interrupts are requested, disable any more requests so we can service it
+            gameboy->cpu->IME = FALSE;
+            // Push the current PC onto the stack so we can jump to an interrupt handler
+            gameboy->cpu->reg_SP -= 2;
+            cpu_write16(gameboy->cpu->reg_SP, gameboy->cpu->reg_PC);
+        }
+        /* 
+         * Order is important here: interrupts are checked in reverse-bit order so higher priority
+         * interrupts overwrite requests for lower priority interrupts.
+        */
+        if(gb_interrupt_enabled(INTERRUPT_CONTROLLER_MASK) && gb_interrupt_requested(INTERRUPT_CONTROLLER_MASK))
+        {
+            interrupt_handler_addr = 0x0060;
+        }
+        if(gb_interrupt_enabled(INTERRUPT_SERIAL_MASK) && gb_interrupt_requested(INTERRUPT_SERIAL_MASK))
+        {
+            interrupt_handler_addr = 0x0058;
+        }
+        if(gb_interrupt_enabled(INTERRUPT_TIMER_MASK) && gb_interrupt_requested(INTERRUPT_TIMER_MASK))
+        {
+            interrupt_handler_addr = 0x0050;
+        }
+        if(gb_interrupt_enabled(INTERRUPT_LCDC_MASK) && gb_interrupt_requested(INTERRUPT_LCDC_MASK))
+        {
+            interrupt_handler_addr = 0x0048;
+        }
+        if(gb_interrupt_enabled(INTERRUPT_VBLANK_MASK) && gb_interrupt_requested(INTERRUPT_VBLANK_MASK))
+        {
+            interrupt_handler_addr = 0x0040;
+        }
+        
+        gameboy->cpu->reg_PC = interrupt_handler_addr;
+        gb_set_interrupt(prioritized_interrupt, FALSE);
+        // The interrupt service routine consumes 5 cycles (2 are wasted for some reason)
+        gameboy->cpu->cycles += 5;
+    }
+}
+
+void gb_set_interrupt(u8 interrupt, BOOL value)
+{
+    // this is all really bad code; TODO: fix this
+    u8 old_interrupt = interrupt;
+    int shift = 0;
+    for(shift; shift < 5; shift++)
+    {
+        // bad code to make a bit mask into a shift
+        if((old_interrupt >>= 1) == 0)
+        {
+            break;
+        }
+    }
+    // TODO: Undefined behavior to shift by 0?
+    cpu_write8(INTERRUPT_REQUEST_ADDR, ((value << shift) | (cpu_read8(INTERRUPT_REQUEST_ADDR) & ~interrupt)));
+}
+BOOL gb_interrupts_requested()
+{
+    return cpu_read8(INTERRUPT_REQUEST_ADDR) != 0;
+}
+BOOL gb_interrupt_requested(u8 interrupt)
+{
+    return (cpu_read8(INTERRUPT_REQUEST_ADDR) & interrupt) != 0;
+}
+BOOL gb_interrupt_enabled(u8 interrupt)
+{
+    return (cpu_read8(INTERRUPT_ENABLED_ADDR) & interrupt) != 0;
+}
+
 
 /*
  * Validate the 16-bit global rom checksum located at 0x14E in the rom header.

@@ -15,7 +15,7 @@
 
 #include "integers.h"
 
-struct z80
+struct gb_cpu
 {
     u16 reg_AF,
         reg_BC,
@@ -25,6 +25,7 @@ struct z80
     u16 reg_SP,
         reg_PC;
     
+    BOOL IME;
     int cycles;
 };
 

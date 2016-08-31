@@ -18,7 +18,7 @@ int main(int argc, const char * argv[]) {
         return 1;
     }
     
-    while(!gb_system_stopped)
+    while(!gameboy->stopped)
     {
         gb_system_loop();
     }

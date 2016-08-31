@@ -22,6 +22,7 @@ static const char* instructions[] =
 
 void gb_core_initialize()
 {
+    gameboy->cpu->IME = FALSE;
 }
 
 
@@ -35,7 +36,7 @@ void cpu_execute(u16 address)
     u8 cycles_add = 0;
     u8 pc_add = 0;
     
-    struct z80* cpu = gameboy->cpu;
+    struct gb_cpu* cpu = gameboy->cpu;
     
     printf("INSTRUCTION: (%s) at %#04x\n", instructions[instr], address);
 
@@ -251,7 +252,7 @@ void cpu_execute(u16 address)
         case 0xCB: // PREFIX CB
             if(!cpu_execute_extended_instruction(address + 1, &cycles_add, &pc_add))
             {
-                gb_system_stopped = TRUE;
+                gameboy->stopped = TRUE;
                 return;
             }
             break;
@@ -260,6 +261,13 @@ void cpu_execute(u16 address)
             cpu->reg_SP -= 2;
             cpu_write16(cpu->reg_SP, cpu->reg_PC + 3);
             cpu->reg_PC = cpu_read16(address + 1);
+            break;
+        case 0xD9: // RETI
+            cycles_add = 16;
+            pc_add = 1;
+            cpu->reg_PC = cpu_read16(cpu->reg_SP);
+            cpu->reg_SP += 2;
+            cpu->IME = TRUE;
             break;
         case 0xE0: // LD ($FF00+a8),A
             cycles_add = 12;
@@ -281,6 +289,16 @@ void cpu_execute(u16 address)
             pc_add = 2;
             reg_set_high(&cpu->reg_AF, cpu_read8(0xFF00 + cpu_read8(address + 1)));
             break;
+        case 0xF3: // DI
+            cycles_add = 4;
+            pc_add = 1;
+            cpu->IME = FALSE;
+            break;
+        case 0xFB: // EI
+            cycles_add = 4;
+            pc_add = 1;
+            cpu->IME = TRUE;
+            break;
         case 0xFE: // CP d8
             cycles_add = 4;
             pc_add = 2;
@@ -290,7 +308,7 @@ void cpu_execute(u16 address)
             break;
         default:
             printf("CPU: Operand %#02x at %#04x not implemented! Aborting...\n", instr, address);
-            gb_system_stopped = TRUE;
+            gameboy->stopped = TRUE;
             return;
     }
     
@@ -302,7 +320,7 @@ BOOL cpu_execute_extended_instruction(u16 address, u8* cycles_add, u8* pc_add)
 {
     u8 instr = cpu_read8(address);
     
-    struct z80* cpu = gameboy->cpu;
+    struct gb_cpu* cpu = gameboy->cpu;
     
     printf("EXTENDED INSTRUCTION: (%#02x) at %#04x\n", /*instructions[0x00 + 0x100]*/instr, address);
     
