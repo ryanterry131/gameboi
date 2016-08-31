@@ -9,6 +9,8 @@
 #ifndef core_h
 #define core_h
 
+#define FLAG_NO_MODIFY -1
+
 #include <stdio.h>
 
 #include "integers.h"
@@ -36,11 +38,17 @@ void cpu_write8(u16, u8);
 void cpu_write16(u16, u16);
 u16 cpu_swap_endianess(u16);
 
+u8 cpu_logic_rl_into(u8);
+u8 cpu_logic_rr_into(u8);
+u8 cpu_logic_rl_through(u8);
+u8 cpu_logic_rr_through(u8);
+
 u8 reg_get_high(u16* reg);
 u8 reg_get_low(u16* reg);
 void reg_set_high(u16* reg, u8 v);
 void reg_set_low(u16* reg, u8 v);
 
+void cpu_set_flags(signed char, signed char, signed char, signed char);
 void flag_set_zero(BOOL);
 BOOL flag_get_zero();
 void flag_set_negative(BOOL);

@@ -44,6 +44,7 @@ void cpu_execute(u16 address)
         case 0x00: // NOP
             cycles_add = 4;
             pc_add = 1;
+            cpu_set_flags(FLAG_NO_MODIFY, FLAG_NO_MODIFY, FLAG_NO_MODIFY, FLAG_NO_MODIFY);
             break;
         case 0x01: // LD BC,d16
             cycles_add = 16;
@@ -68,7 +69,10 @@ void cpu_execute(u16 address)
         case 0x05: // DEC B
             cycles_add = 4;
             pc_add = 1;
-            reg_set_high(&cpu->reg_BC, reg_get_high(&cpu->reg_BC) - 1);
+            u8 sub_b = reg_get_high(&cpu->reg_BC) - 1;
+            reg_set_high(&cpu->reg_BC, sub_b);
+            // TODO: Modify half-carry flag properly
+            cpu_set_flags(sub_b == 0, TRUE, FLAG_NO_MODIFY, FLAG_NO_MODIFY);
             break;
         case 0x06: // LD B,d8
             cycles_add = 8;
@@ -86,6 +90,14 @@ void cpu_execute(u16 address)
             cycles_add = 4;
             pc_add = 1;
             reg_set_low(&cpu->reg_BC, reg_get_low(&cpu->reg_BC) + 1);
+            break;
+        case 0x0D: // DEC C
+            cycles_add = 4;
+            pc_add = 1;
+            u8 sub_c = reg_get_low(&cpu->reg_BC) - 1;
+            reg_set_low(&cpu->reg_BC, sub_c);
+            // TODO: Modify half-carry flag properly
+            cpu_set_flags(sub_c == 0, TRUE, FLAG_NO_MODIFY, FLAG_NO_MODIFY);
             break;
         case 0x0E: // LD C,d8
             cycles_add = 8;
@@ -105,13 +117,22 @@ void cpu_execute(u16 address)
         case 0x17: // RLA
             cycles_add = 4;
             pc_add = 1;
-            // TODO: ROTATE THIS
-            reg_set_high(&cpu->reg_AF, reg_get_high(&cpu->reg_AF) << 1);
+            reg_set_high(&cpu->reg_AF, cpu_logic_rl_through(reg_get_high(&cpu->reg_AF)));
+            break;
+        case 0x18: // JR r8
+            cycles_add = 12;
+            pc_add = 2;
+            cpu->reg_PC += (signed char)(cpu_read8(address + 1));
             break;
         case 0x1A: // LD A,(DE)
             cycles_add = 8;
             pc_add = 1;
             reg_set_high(&cpu->reg_AF, cpu_read8(cpu->reg_DE));
+            break;
+        case 0x1E: // LD E,d8
+            cycles_add = 8;
+            pc_add = 2;
+            reg_set_low(&cpu->reg_DE, cpu_read8(address + 1));
             break;
         case 0x20: // JR NZ,r8
             cycles_add = 8;
@@ -138,6 +159,20 @@ void cpu_execute(u16 address)
             pc_add = 1;
             cpu->reg_HL++;
             break;
+        case 0x28: // JR Z,r8
+            cycles_add = 8;
+            pc_add = 2;
+            if(flag_get_zero())
+            {
+                cycles_add = 12;
+                cpu->reg_PC += (signed char)(cpu_read8(address + 1));
+            }
+            break;
+        case 0x2E: // LD L,d8
+            cycles_add = 8;
+            pc_add = 2;
+            reg_set_low(&cpu->reg_HL, cpu_read8(address + 1));
+            break;
         case 0x31: // LD SP,d16
             cycles_add = 12;
             pc_add = 3;
@@ -149,6 +184,14 @@ void cpu_execute(u16 address)
             cpu_write8(cpu->reg_HL, reg_get_high(&cpu->reg_AF));
             cpu->reg_HL--;
             break;
+        case 0x3D: // DEC A
+            cycles_add = 4;
+            pc_add = 1;
+            u8 sub_a = reg_get_high(&cpu->reg_AF) - 1;
+            reg_set_high(&cpu->reg_AF, sub_a);
+            // TODO: Modify half-carry flag properly
+            cpu_set_flags(sub_a == 0, TRUE, FLAG_NO_MODIFY, FLAG_NO_MODIFY);
+            break;
         case 0x3E: // LD A,d8
             cycles_add = 8;
             pc_add = 2;
@@ -158,6 +201,16 @@ void cpu_execute(u16 address)
             cycles_add = 4;
             pc_add = 1;
             reg_set_low(&cpu->reg_BC, reg_get_high(&cpu->reg_AF));
+            break;
+        case 0x57: // LD D,A
+            cycles_add = 4;
+            pc_add = 1;
+            reg_set_high(&cpu->reg_DE, reg_get_high(&cpu->reg_AF));
+            break;
+        case 0x67: // LD H,A
+            cycles_add = 4;
+            pc_add = 1;
+            reg_set_high(&cpu->reg_HL, reg_get_high(&cpu->reg_AF));
             break;
         case 0x77: // LD (HL),A
             cycles_add = 8;
@@ -218,15 +271,22 @@ void cpu_execute(u16 address)
             pc_add = 1;
             cpu_write8(0xFF00 + reg_get_low(&cpu->reg_BC), reg_get_high(&cpu->reg_AF));
             break;
+        case 0xEA: // LD (a16),A
+            cycles_add = 16;
+            pc_add = 3;
+            cpu_write8(cpu_read16(address + 1), reg_get_high(&cpu->reg_AF));
+            break;
+        case 0xF0: // LD A,($FF00+a8)
+            cycles_add = 12;
+            pc_add = 2;
+            reg_set_high(&cpu->reg_AF, cpu_read8(0xFF00 + cpu_read8(address + 1)));
+            break;
         case 0xFE: // CP d8
             cycles_add = 4;
             pc_add = 2;
-            // TODO: FINISH
-            flag_set_zero(TRUE);
-            if(reg_get_high(&cpu->reg_AF) - cpu_read8(address + 1) == 0)
-            {
-                flag_set_zero(FALSE);
-            }
+            signed char result = reg_get_high(&cpu->reg_AF) - cpu_read8(address + 1);
+            // TODO: Modify half-carry and carry flags properly
+            cpu_set_flags(result == 0, TRUE, FLAG_NO_MODIFY, FLAG_NO_MODIFY);
             break;
         default:
             printf("CPU: Operand %#02x at %#04x not implemented! Aborting...\n", instr, address);
@@ -251,8 +311,7 @@ BOOL cpu_execute_extended_instruction(u16 address, u8* cycles_add, u8* pc_add)
         case 0x11: // RL C
             *cycles_add = 8;
             *pc_add = 2;
-            // TODO: ROTATE THIS
-            reg_set_low(&cpu->reg_BC, reg_get_low(&cpu->reg_BC) << 1);
+            reg_set_low(&cpu->reg_BC, cpu_logic_rl_through(reg_get_low(&cpu->reg_BC)));
             break;
         case 0x7C: // BIT 7,H
             *cycles_add = 8;
@@ -292,6 +351,78 @@ u16 cpu_swap_endianess(u16 value)
     return ((value << 8) | (value >> 8));
 }
 
+/*
+ * ================= LOGIC =================
+ */
+
+/*
+ * Rotate into the carry flag
+*/
+u8 cpu_logic_rl_into(u8 value)
+{
+    BOOL carry = FALSE;
+    if((value & 0b10000000) != 0)
+    {
+        carry = TRUE;
+    }
+    
+    value <<= 1;
+    
+    value |= carry;
+    flag_set_carry(carry);
+    
+    return value;
+}
+u8 cpu_logic_rr_into(u8 value)
+{
+    BOOL carry = FALSE;
+    if((value & 0b00000001) != 0)
+    {
+        carry = TRUE;
+    }
+    
+    value >>= 1;
+    
+    value |= (carry << 7);
+    flag_set_carry(carry);
+    
+    return value;
+}
+/*
+ * Rotate through the carry flag
+*/
+u8 cpu_logic_rl_through(u8 value)
+{
+    BOOL carry = FALSE;
+    if((value & 0b10000000) != 0)
+    {
+        carry = TRUE;
+    }
+    
+    value <<= 1;
+    
+    value |= flag_get_carry();
+    flag_set_carry(carry);
+    
+    return value;
+}
+u8 cpu_logic_rr_through(u8 value)
+{
+    BOOL carry = FALSE;
+    if((value & 0b00000001) != 0)
+    {
+        carry = TRUE;
+    }
+    
+    value >>= 1;
+    
+    value |= (flag_get_carry() << 7);
+    flag_set_carry(carry);
+    
+    return value;
+}
+
+
 
 /*
  * ================= REGISTERS =================
@@ -314,6 +445,21 @@ void reg_set_low(u16* reg, u8 v)
     *reg = ((*reg & 0xFF00) | v);
 }
 
+/*
+ * ================= FLAGS =================
+ */
+
+void cpu_set_flags(signed char z, signed char n, signed char h, signed char c)
+{
+    if(z != FLAG_NO_MODIFY)
+        flag_set_zero(z);
+    if(n != FLAG_NO_MODIFY)
+        flag_set_negative(n);
+    if(h != FLAG_NO_MODIFY)
+        flag_set_halfcarry(h);
+    if(c != FLAG_NO_MODIFY)
+        flag_set_carry(c);
+}
 void flag_set_zero(BOOL set)
 {
     reg_set_low(&gameboy->cpu->reg_AF, ((set << FLAG_ZERO_SHIFT) | (reg_get_low(&gameboy->cpu->reg_AF) & ~FLAG_ZERO_MASK)));

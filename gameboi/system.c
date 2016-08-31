@@ -89,7 +89,7 @@ BOOL gb_system_validate_rom_checksum()
     }
     
     // swap endianess
-    checksum = ((checksum << 8) | (checksum >> 8));
+    checksum = cpu_swap_endianess(checksum);
     printf("Generated checksum:%#04x\n", checksum);
     return checksum == gameboy->current_rom->header.globalChecksum;
 }
