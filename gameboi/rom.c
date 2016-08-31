@@ -6,22 +6,23 @@
 //  Copyright © 2016 Byteandahalf. All rights reserved.
 //
 
-#include <stdlib.h>
-#include <sys/stat.h>
-
 #include "system.h"
-#include "dataio.h"
 #include "rom.h"
 
+#include <stdlib.h> // for malloc
+#include <stdio.h> // for printf and FILE
+#include <string.h> // for memcpy
+#include <sys/stat.h> // for stat
 
-BOOL gb_rom_load(const char* path)
+
+bool gb_rom_load(const char* path)
 {
     FILE* rom = fopen(path, "rb");
     
     if(!rom)
     {
         printf("Invalid ROM!\n");
-        return FALSE;
+        return false;
     }
     
     gameboy->current_rom = (struct gb_rom*) malloc(sizeof(struct gb_rom));
@@ -37,19 +38,19 @@ BOOL gb_rom_load(const char* path)
     {
         // setup rom header
         struct rom_header* header = &gameboy->current_rom->header;
-        read32(&header->entryCode, gameboy->current_rom->rawBytes, 0x100);
-        readBytes(header->nintendoLogo, gameboy->current_rom->rawBytes, 0x104, 0x30);
-        readChars(header->gameTitle, gameboy->current_rom->rawBytes, 0x134, 0x10);
-        read16(&header->newLicensee, gameboy->current_rom->rawBytes, 0x144);
-        read8(&header->sgbFunction, gameboy->current_rom->rawBytes, 0x146);
-        read8(&header->cartridgeType, gameboy->current_rom->rawBytes, 0x147);
-        read8(&header->ROMsize, gameboy->current_rom->rawBytes, 0x148);
-        read8(&header->RAMsize, gameboy->current_rom->rawBytes, 0x149);
-        read8(&header->international, gameboy->current_rom->rawBytes, 0x14A);
-        read8(&header->oldLicensee, gameboy->current_rom->rawBytes, 0x14B);
-        read8(&header->versionCode, gameboy->current_rom->rawBytes, 0x14C);
-        read8(&header->headerChecksum, gameboy->current_rom->rawBytes, 0x14D);
-        read16(&header->globalChecksum, gameboy->current_rom->rawBytes, 0x14E);
+        gb_rom_read32(&header->entryCode, gameboy->current_rom->rawBytes, 0x100);
+        gb_rom_readBytes(header->nintendoLogo, gameboy->current_rom->rawBytes, 0x104, 0x30);
+        gb_rom_readChars(header->gameTitle, gameboy->current_rom->rawBytes, 0x134, 0x10);
+        gb_rom_read16(&header->newLicensee, gameboy->current_rom->rawBytes, 0x144);
+        gb_rom_read8(&header->sgbFunction, gameboy->current_rom->rawBytes, 0x146);
+        gb_rom_read8(&header->cartridgeType, gameboy->current_rom->rawBytes, 0x147);
+        gb_rom_read8(&header->ROMsize, gameboy->current_rom->rawBytes, 0x148);
+        gb_rom_read8(&header->RAMsize, gameboy->current_rom->rawBytes, 0x149);
+        gb_rom_read8(&header->international, gameboy->current_rom->rawBytes, 0x14A);
+        gb_rom_read8(&header->oldLicensee, gameboy->current_rom->rawBytes, 0x14B);
+        gb_rom_read8(&header->versionCode, gameboy->current_rom->rawBytes, 0x14C);
+        gb_rom_read8(&header->headerChecksum, gameboy->current_rom->rawBytes, 0x14D);
+        gb_rom_read16(&header->globalChecksum, gameboy->current_rom->rawBytes, 0x14E);
     }
     
     gb_rom_print_header();
@@ -57,12 +58,12 @@ BOOL gb_rom_load(const char* path)
     if(!gb_rom_validate_checksum())
     {
         printf("ERROR: Invalid checksum in ROM header! Aborting...\n");
-        return FALSE;
+        return false;
     }
     
     printf("Checksum OK!\n");
     
-    return TRUE;
+    return true;
 }
 
 void gb_rom_print_header()
@@ -91,7 +92,7 @@ void gb_rom_print_header()
     printf("Global Checksum:%#02x\n", gameboy->current_rom->header.globalChecksum);
 }
 
-BOOL gb_rom_validate_checksum()
+bool gb_rom_validate_checksum()
 {
     int checksum = 0;
     for(int i = 0x134; i <= 0x14C; i++)
@@ -100,4 +101,25 @@ BOOL gb_rom_validate_checksum()
     }
     
     return ((checksum & 0xFF) == gameboy->current_rom->header.headerChecksum);
+}
+
+void gb_rom_read8(u8* destination, const byte* src, int offset)
+{
+    *destination = src[offset];
+}
+void gb_rom_read16(u16* destination, const byte* src, int offset)
+{
+    memcpy(destination, src + offset, sizeof(*destination));
+}
+void gb_rom_read32(u32* destination, const byte* src, int offset)
+{
+    memcpy(destination, src + offset, sizeof(*destination));
+}
+void gb_rom_readChars(char* destination, const byte* src, int offset, int bytes)
+{
+    memcpy(destination, src + offset, bytes);
+}
+void gb_rom_readBytes(byte* destination, const byte* src, int offset, int bytes)
+{
+    memcpy(destination, src + offset, bytes);
 }

@@ -6,22 +6,24 @@
 //  Copyright © 2016 Byteandahalf. All rights reserved.
 //
 
-#include <stdlib.h>
-#include <string.h>
-
 #include "system.h"
 #include "rom.h"
 #include "core.h"
 #include "audio.h"
-#include "renderer.h"
+#include "gpu.h"
+#include "databus.h"
+
+#include <stdlib.h> // for malloc
+#include <string.h> // for memcpy
+#include <stdio.h> // for printf and FILE
 
 struct gb_system* gameboy;
 
-BOOL gb_system_boot()
+bool gb_system_boot()
 {
     gameboy = (struct gb_system*) malloc(sizeof(struct gb_system));
     gameboy->cpu = (struct gb_cpu*) malloc(sizeof(struct gb_cpu));
-    gameboy->stopped = FALSE;
+    gameboy->stopped = false;
     
     {
         // setup memory pages
@@ -40,7 +42,7 @@ BOOL gb_system_boot()
     if(!gb_rom_load(path) || !gb_system_validate_rom_checksum())
     {
         printf("Failed to load rom!\n");
-        return FALSE;
+        return false;
     }
     
     gb_system_swap_bank(gameboy->rom_bank0, 0);
@@ -50,16 +52,14 @@ BOOL gb_system_boot()
     {
         printf("Internal bootrom not yet implemented! Aborting...\n");
         //gb_system_internal_bootstrap();
-        return FALSE;
+        return false;
     }
-    
-    gameboy->cpu->reg_PC = 0x0000;
     
     gb_core_initialize();
     gb_audio_initialize();
-    gb_renderer_initialize();
+    gb_gpu_initialize();
     
-    return TRUE;
+    return true;
 }
 
 /*
@@ -70,7 +70,7 @@ void gb_system_loop()
     gb_service_interrupts();
 
     cpu_execute(gameboy->cpu->reg_PC);
-    
+
     gb_tick_delayed_interrupts();
 }
 
@@ -93,10 +93,10 @@ void gb_service_interrupts()
         if(gb_interrupts_requested())
         {
             // If interrupts are requested, disable any more requests so we can service it
-            gameboy->cpu->IME = FALSE;
+            gameboy->cpu->IME = false;
             // Push the current PC onto the stack so we can jump to an interrupt handler
             gameboy->cpu->reg_SP -= 2;
-            cpu_write16(gameboy->cpu->reg_SP, gameboy->cpu->reg_PC);
+            databus_write16(gameboy->cpu->reg_SP, gameboy->cpu->reg_PC);
         }
         /* 
          * Order is important here: interrupts are checked in reverse-bit order so higher priority
@@ -124,13 +124,13 @@ void gb_service_interrupts()
         }
         
         gameboy->cpu->reg_PC = interrupt_handler_addr;
-        gb_set_interrupt(prioritized_interrupt, FALSE);
+        gb_set_interrupt(prioritized_interrupt, false);
         // The interrupt service routine consumes 5 cycles (2 are wasted for some reason)
         gameboy->cpu->cycles += 5;
     }
 }
 
-void gb_set_interrupt(u8 interrupt, BOOL value)
+void gb_set_interrupt(u8 interrupt, bool value)
 {
     // this is all really bad code; TODO: fix this
     u8 old_interrupt = interrupt;
@@ -144,19 +144,19 @@ void gb_set_interrupt(u8 interrupt, BOOL value)
         }
     }
     // TODO: Undefined behavior to shift by 0?
-    cpu_write8(INTERRUPT_REQUEST_ADDR, ((value << shift) | (cpu_read8(INTERRUPT_REQUEST_ADDR) & ~interrupt)));
+    databus_write8(INTERRUPT_REQUEST_ADDR, ((((u8)value) << shift) | (databus_read8(INTERRUPT_REQUEST_ADDR) & ~interrupt)));
 }
-BOOL gb_interrupts_requested()
+bool gb_interrupts_requested()
 {
-    return cpu_read8(INTERRUPT_REQUEST_ADDR) != 0;
+    return databus_read8(INTERRUPT_REQUEST_ADDR) != 0;
 }
-BOOL gb_interrupt_requested(u8 interrupt)
+bool gb_interrupt_requested(u8 interrupt)
 {
-    return (cpu_read8(INTERRUPT_REQUEST_ADDR) & interrupt) != 0;
+    return (databus_read8(INTERRUPT_REQUEST_ADDR) & interrupt) != 0;
 }
-BOOL gb_interrupt_enabled(u8 interrupt)
+bool gb_interrupt_enabled(u8 interrupt)
 {
-    return (cpu_read8(INTERRUPT_ENABLED_ADDR) & interrupt) != 0;
+    return (databus_read8(INTERRUPT_ENABLED_ADDR) & interrupt) != 0;
 }
 
 
@@ -166,7 +166,7 @@ BOOL gb_interrupt_enabled(u8 interrupt)
  * Interestingly, real GameBoys don't actually validate this, so this checksum
  * goes unused. We'll do it anyway because we're well behaved.
 */
-BOOL gb_system_validate_rom_checksum()
+bool gb_system_validate_rom_checksum()
 {
     u16 checksum = 0;
     for(int i = 0; i < gameboy->current_rom->rom_size; i++)
@@ -179,7 +179,7 @@ BOOL gb_system_validate_rom_checksum()
     }
     
     // swap endianess
-    checksum = cpu_swap_endianess(checksum);
+    checksum = databus_swap_endianess(checksum);
     printf("Generated checksum:%#04x\n", checksum);
     return checksum == gameboy->current_rom->header.globalChecksum;
 }
@@ -189,7 +189,7 @@ void gb_system_swap_bank(u8* bank_ptr, int bank)
     memcpy(bank_ptr, gameboy->current_rom->rawBytes + (bank * GAMEBOY_ROM_BANK_SIZE), GAMEBOY_ROM_BANK_SIZE);
 }
 
-BOOL gb_system_load_map_bootrom(int map_addr, int bootrom_size)
+bool gb_system_load_map_bootrom(int map_addr, int bootrom_size)
 {
     const char* bootrom_path = "/Users/ryan/Downloads/bootrom.bin";
     FILE* bootrom = fopen(bootrom_path, "rb");
@@ -197,13 +197,13 @@ BOOL gb_system_load_map_bootrom(int map_addr, int bootrom_size)
     if(!bootrom)
     {
         printf("Bootrom image invalid!\n");
-        return FALSE;
+        return false;
     }
     
     fread(gameboy->memory_map + map_addr, bootrom_size, 1, bootrom);
     
     fclose(bootrom);
-    return TRUE;
+    return true;
 }
 
 void gb_system_shutdown()

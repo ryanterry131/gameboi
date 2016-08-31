@@ -11,8 +11,6 @@
 
 #define FLAG_NO_MODIFY -1
 
-#include <stdio.h>
-
 #include "integers.h"
 
 struct gb_cpu
@@ -25,38 +23,34 @@ struct gb_cpu
     u16 reg_SP,
         reg_PC;
     
-    BOOL IME;
+    bool IME;
     int cycles;
 };
 
 void gb_core_initialize();
 
 void cpu_execute(u16 address);
-BOOL cpu_execute_extended_instruction(u16 address, u8* cycles_add, u8* pc_add);
-u8 cpu_read8(u16 address);
-u16 cpu_read16(u16);
-void cpu_write8(u16, u8);
-void cpu_write16(u16, u16);
-u16 cpu_swap_endianess(u16);
+bool cpu_execute_extended_instruction(u16 address, u8* cycles_add, u8* pc_add);
 
+// logic
 u8 cpu_logic_rl_into(u8);
 u8 cpu_logic_rr_into(u8);
 u8 cpu_logic_rl_through(u8);
 u8 cpu_logic_rr_through(u8);
-
+// registers
 u8 reg_get_high(u16* reg);
 u8 reg_get_low(u16* reg);
 void reg_set_high(u16* reg, u8 v);
 void reg_set_low(u16* reg, u8 v);
-
+// flags
 void cpu_set_flags(signed char, signed char, signed char, signed char);
-void flag_set_zero(BOOL);
-BOOL flag_get_zero();
-void flag_set_negative(BOOL);
-BOOL flag_get_negative();
-void flag_set_halfcarry(BOOL);
-BOOL flag_get_halfcarry();
-void flag_set_carry(BOOL);
-BOOL flag_get_carry();
+void flag_set_zero(bool);
+bool flag_get_zero();
+void flag_set_negative(bool);
+bool flag_get_negative();
+void flag_set_halfcarry(bool);
+bool flag_get_halfcarry();
+void flag_set_carry(bool);
+bool flag_get_carry();
 
 #endif /* core_h */

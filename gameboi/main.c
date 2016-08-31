@@ -6,7 +6,7 @@
 //  Copyright © 2016 Byteandahalf. All rights reserved.
 //
 
-#include <stdio.h>
+#include <stdio.h> // for printf
 
 #include "system.h"
 

@@ -21,8 +21,6 @@
 #define INTERRUPT_SERIAL_MASK       0b00001000
 #define INTERRUPT_CONTROLLER_MASK   0b00010000
 
-#include <stdio.h>
-
 struct gb_cpu;
 struct gb_rom;
 #include "integers.h"
@@ -32,7 +30,7 @@ struct gb_system
     struct gb_cpu* cpu;
     struct gb_rom* current_rom;
     
-    BOOL stopped;
+    bool stopped;
     
     u8* memory_map;
     u8* rom_bank0;      // 0x0000
@@ -47,19 +45,19 @@ struct gb_system
 
 extern struct gb_system* gameboy;
 
-BOOL gb_system_boot();
+bool gb_system_boot();
 void gb_system_loop();
 
 void gb_tick_delayed_interrupts();
 void gb_service_interrupts();
-void gb_set_interrupt(u8, BOOL);
-BOOL gb_interrupts_requested();
-BOOL gb_interrupt_requested(u8);
-BOOL gb_interrupt_enabled(u8);
+void gb_set_interrupt(u8, bool);
+bool gb_interrupts_requested();
+bool gb_interrupt_requested(u8);
+bool gb_interrupt_enabled(u8);
 
-BOOL gb_system_validate_rom_checksum();
+bool gb_system_validate_rom_checksum();
 void gb_system_swap_bank(u8* bank_ptr, int bank);
-BOOL gb_system_load_map_bootrom(int, int);
+bool gb_system_load_map_bootrom(int, int);
 
 void gb_system_shutdown();
 

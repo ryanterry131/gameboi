@@ -10,6 +10,7 @@
 #define integers_h
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define FLAG_ZERO_MASK          0b10000000
 #define FLAG_ZERO_SHIFT         0x00000007
@@ -24,9 +25,5 @@ typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint8_t byte;
-
-#define FALSE 0
-#define TRUE 1
-typedef byte BOOL;
 
 #endif /* integers_h */

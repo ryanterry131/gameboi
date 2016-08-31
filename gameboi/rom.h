@@ -9,8 +9,6 @@
 #ifndef rom_h
 #define rom_h
 
-#include <stdio.h>
-
 #include "integers.h"
 
 struct rom_header
@@ -64,10 +62,14 @@ struct gb_rom
     byte* rawBytes;
 };
 
-
-BOOL gb_rom_load(const char*);
+bool gb_rom_load(const char*);
 void gb_rom_print_header();
-BOOL gb_rom_validate_checksum();
+bool gb_rom_validate_checksum();
 
+void gb_rom_read8(u8* destination, const byte* src, int offset);
+void gb_rom_read16(u16* destination, const byte* src, int offset);
+void gb_rom_read32(u32* destination, const byte* src, int offset);
+void gb_rom_readChars(char* destination, const byte* src, int offset, int bytes);
+void gb_rom_readBytes(byte* destination, const byte* src, int offset, int bytes);
 
 #endif /* rom_h */
