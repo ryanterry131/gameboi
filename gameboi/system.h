@@ -36,6 +36,7 @@ struct gb_system
     struct gb_cpu* cpu;
     struct gb_rom* current_rom;
     
+    bool IME; // interrupt master enable
     bool stopped;
     
     u8* memory_map;

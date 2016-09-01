@@ -56,6 +56,17 @@ bool gb_system_boot()
         return false;
     }
     
+    {
+        // initial values for special registers
+        gameboy->IME = false;
+        databus_write8(DIV_TIMER_ADDR, 0x0000);
+        databus_write8(TIMA_TIMER_ADDR, 0x0000);
+        databus_write8(TIMA_MODULO_ADDR, 0x0000);
+        databus_write8(TIMA_CONTROL_ADDR, 0x0000);
+        databus_write8(INTERRUPT_REQUEST_ADDR, 0x0000);
+        databus_write8(INTERRUPT_ENABLED_ADDR, 0x0000);
+    }
+    
     cpu_initialize();
     audio_initialize();
     gpu_initialize();
@@ -95,7 +106,7 @@ void gb_tick_delayed_interrupts()
 
 void gb_service_interrupts()
 {
-    if(gameboy->cpu->IME)
+    if(gameboy->IME)
     {
         u16 int_vector_addr = 0x0040;
         // scan through each possible interrupt and service if the bit is set
@@ -105,7 +116,7 @@ void gb_service_interrupts()
             {
                 printf("PROCESSING INTERRUPT: %#02x", mask);
                 // disable global interrupts and the current interrupt
-                gameboy->cpu->IME = false;
+                gameboy->IME = false;
                 gb_set_IF(mask, false);
                 // push the existing PC onto the stack and replace it with the interrupt vector
                 gameboy->cpu->reg_SP -= 2;
@@ -164,7 +175,7 @@ void gb_tick_timers(int lastCycles)
         u8 tima_next = databus_read8(TIMA_TIMER_ADDR) + 1;
         if(tima_next == 0x00)
         {
-            gameboy->cpu->IME = true;
+            gameboy->IME = true;
             gb_set_IF(INTERRUPT_TIMER_MASK, true);
             gb_set_IE(INTERRUPT_TIMER_MASK, true); // enable the interrupt
             databus_write8(TIMA_TIMER_ADDR, databus_read8(TIMA_MODULO_ADDR));

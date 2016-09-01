@@ -23,7 +23,6 @@ static const char* instructions[] =
 
 void cpu_initialize()
 {
-    gameboy->cpu->IME = false;
     gameboy->cpu->reg_PC = 0x0000;
     gameboy->cpu->cycles = 0;
 }
@@ -269,7 +268,7 @@ int cpu_execute(u16 address)
             pc_add = 1;
             cpu->reg_PC = databus_read16(cpu->reg_SP);
             cpu->reg_SP += 2;
-            cpu->IME = true;
+            gameboy->IME = true;
             break;
         case 0xE0: // LD ($FF00+a8),A
             cycles_add = 12;
@@ -294,12 +293,12 @@ int cpu_execute(u16 address)
         case 0xF3: // DI
             cycles_add = 4;
             pc_add = 1;
-            cpu->IME = false;
+            gameboy->IME = false;
             break;
         case 0xFB: // EI
             cycles_add = 4;
             pc_add = 1;
-            cpu->IME = true;
+            gameboy->IME = true;
             break;
         case 0xFE: // CP d8
             cycles_add = 4;

@@ -22,8 +22,7 @@ struct gb_cpu
     
     u16 reg_SP,
         reg_PC;
-    
-    bool IME;
+
     int cycles;
 };
 
