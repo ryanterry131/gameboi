@@ -50,14 +50,13 @@ void gb_system_loop();
 
 void gb_tick_delayed_interrupts();
 void gb_service_interrupts();
-void gb_set_interrupt(u8, bool);
-bool gb_interrupts_requested();
-bool gb_interrupt_requested(u8);
-bool gb_interrupt_enabled(u8);
+u8 gb_get_IF();
+u8 gb_get_IE();
+void gb_set_IF(u8 interrupt_mask, bool value);
 
 bool gb_system_validate_rom_checksum();
 void gb_system_swap_bank(u8* bank_ptr, int bank);
-bool gb_system_load_map_bootrom(int, int);
+bool gb_system_load_map_bootrom(int map_addr, int bootrom_size);
 
 void gb_system_shutdown();
 

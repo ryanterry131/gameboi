@@ -62,7 +62,7 @@ struct gb_rom
     byte* rawBytes;
 };
 
-bool gb_rom_load(const char*);
+bool gb_rom_load(const char* path);
 void gb_rom_print_header();
 bool gb_rom_validate_checksum();
 

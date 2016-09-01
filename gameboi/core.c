@@ -408,17 +408,17 @@ u8 reg_get_high(u16* reg)
 {
     return (*reg >> 8) & 0xFF;
 }
-void reg_set_high(u16* reg, u8 v)
+void reg_set_high(u16* reg, u8 value)
 {
-    *reg = ((v << 8) | (*reg & 0xFF));
+    *reg = ((value << 8) | (*reg & 0xFF));
 }
 u8 reg_get_low(u16* reg)
 {
     return *reg & 0xFF;
 }
-void reg_set_low(u16* reg, u8 v)
+void reg_set_low(u16* reg, u8 value)
 {
-    *reg = ((*reg & 0xFF00) | v);
+    *reg = ((*reg & 0xFF00) | value);
 }
 
 /*

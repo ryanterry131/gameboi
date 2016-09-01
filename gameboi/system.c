@@ -67,10 +67,9 @@ bool gb_system_boot()
 */
 void gb_system_loop()
 {
-    gb_service_interrupts();
-
     cpu_execute(gameboy->cpu->reg_PC);
 
+    gb_service_interrupts();
     gb_tick_delayed_interrupts();
 }
 
@@ -87,76 +86,40 @@ void gb_service_interrupts()
 {
     if(gameboy->cpu->IME)
     {
-        u16 interrupt_handler_addr = 0x0000;
-        u8 prioritized_interrupt = 0b00000000;
-
-        if(gb_interrupts_requested())
+        u16 int_vector_addr = 0x0040;
+        for(u8 mask = 0b00000001; mask <= 0b00010000; mask <<= 1)
         {
-            // If interrupts are requested, disable any more requests so we can service it
-            gameboy->cpu->IME = false;
-            // Push the current PC onto the stack so we can jump to an interrupt handler
-            gameboy->cpu->reg_SP -= 2;
-            databus_write16(gameboy->cpu->reg_SP, gameboy->cpu->reg_PC);
+            if((gb_get_IF() & mask) != 0 && (gb_get_IE() & mask) != 0)
+            {
+                // disable global interrupts and the current interrupt
+                gameboy->cpu->IME = false;
+                gb_set_IF(mask, false);
+                // push the existing PC onto the stack and replace it with the interrupt vector
+                gameboy->cpu->reg_SP -= 2;
+                databus_write16(gameboy->cpu->reg_SP, gameboy->cpu->reg_PC);
+                gameboy->cpu->reg_PC = int_vector_addr;
+                // this process consumes 5 cycles (two of which are stalled)
+                gameboy->cpu->cycles += 5;
+                return;
+            }
+            
+            int_vector_addr += 0x0008;
         }
-        /* 
-         * Order is important here: interrupts are checked in reverse-bit order so higher priority
-         * interrupts overwrite requests for lower priority interrupts.
-        */
-        if(gb_interrupt_enabled(INTERRUPT_CONTROLLER_MASK) && gb_interrupt_requested(INTERRUPT_CONTROLLER_MASK))
-        {
-            interrupt_handler_addr = 0x0060;
-        }
-        if(gb_interrupt_enabled(INTERRUPT_SERIAL_MASK) && gb_interrupt_requested(INTERRUPT_SERIAL_MASK))
-        {
-            interrupt_handler_addr = 0x0058;
-        }
-        if(gb_interrupt_enabled(INTERRUPT_TIMER_MASK) && gb_interrupt_requested(INTERRUPT_TIMER_MASK))
-        {
-            interrupt_handler_addr = 0x0050;
-        }
-        if(gb_interrupt_enabled(INTERRUPT_LCDC_MASK) && gb_interrupt_requested(INTERRUPT_LCDC_MASK))
-        {
-            interrupt_handler_addr = 0x0048;
-        }
-        if(gb_interrupt_enabled(INTERRUPT_VBLANK_MASK) && gb_interrupt_requested(INTERRUPT_VBLANK_MASK))
-        {
-            interrupt_handler_addr = 0x0040;
-        }
-        
-        gameboy->cpu->reg_PC = interrupt_handler_addr;
-        gb_set_interrupt(prioritized_interrupt, false);
-        // The interrupt service routine consumes 5 cycles (2 are wasted for some reason)
-        gameboy->cpu->cycles += 5;
     }
 }
 
-void gb_set_interrupt(u8 interrupt, bool value)
+u8 gb_get_IF()
 {
-    // this is all really bad code; TODO: fix this
-    u8 old_interrupt = interrupt;
-    int shift = 0;
-    for(shift; shift < 5; shift++)
-    {
-        // bad code to make a bit mask into a shift
-        if((old_interrupt >>= 1) == 0)
-        {
-            break;
-        }
-    }
-    // TODO: Undefined behavior to shift by 0?
-    databus_write8(INTERRUPT_REQUEST_ADDR, ((((u8)value) << shift) | (databus_read8(INTERRUPT_REQUEST_ADDR) & ~interrupt)));
+    return databus_read8(INTERRUPT_REQUEST_ADDR);
 }
-bool gb_interrupts_requested()
+u8 gb_get_IE()
 {
-    return databus_read8(INTERRUPT_REQUEST_ADDR) != 0;
+    return databus_read8(INTERRUPT_ENABLED_ADDR);
 }
-bool gb_interrupt_requested(u8 interrupt)
+void gb_set_IF(u8 interrupt_mask, bool value)
 {
-    return (databus_read8(INTERRUPT_REQUEST_ADDR) & interrupt) != 0;
-}
-bool gb_interrupt_enabled(u8 interrupt)
-{
-    return (databus_read8(INTERRUPT_ENABLED_ADDR) & interrupt) != 0;
+    databus_write8(INTERRUPT_REQUEST_ADDR,
+        ((databus_read8(INTERRUPT_REQUEST_ADDR) & ~interrupt_mask) | (value? interrupt_mask : 0b00000000)));
 }
 
 
