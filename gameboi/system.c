@@ -23,6 +23,7 @@ bool gb_system_boot()
 {
     gameboy = (struct gb_system*) malloc(sizeof(struct gb_system));
     gameboy->cpu = (struct gb_cpu*) malloc(sizeof(struct gb_cpu));
+
     gameboy->stopped = false;
     
     {
@@ -48,16 +49,16 @@ bool gb_system_boot()
     gb_system_swap_bank(gameboy->rom_bank0, 0);
     gb_system_swap_bank(gameboy->rom_bank1, 1);
     
-    if(!gb_system_load_map_bootrom(0x0000, 0x256))
+    if(!gb_system_load_map_bootrom(0x0000, 0x100))
     {
         printf("Internal bootrom not yet implemented! Aborting...\n");
         //gb_system_internal_bootstrap();
         return false;
     }
     
-    gb_core_initialize();
-    gb_audio_initialize();
-    gb_gpu_initialize();
+    cpu_initialize();
+    audio_initialize();
+    gpu_initialize();
     
     return true;
 }
@@ -67,10 +68,20 @@ bool gb_system_boot()
 */
 void gb_system_loop()
 {
-    cpu_execute(gameboy->cpu->reg_PC);
+    int lastCycles = cpu_execute(gameboy->cpu->reg_PC);
+    if(lastCycles == 0)
+    {
+        // an exception occurred executing the instruction; bail
+        gameboy->stopped = true;
+        return;
+    }
 
     gb_service_interrupts();
     gb_tick_delayed_interrupts();
+    
+    gpu_tick();
+    
+    gb_tick_timers(lastCycles);
 }
 
 /*
@@ -87,10 +98,12 @@ void gb_service_interrupts()
     if(gameboy->cpu->IME)
     {
         u16 int_vector_addr = 0x0040;
+        // scan through each possible interrupt and service if the bit is set
         for(u8 mask = 0b00000001; mask <= 0b00010000; mask <<= 1)
         {
             if((gb_get_IF() & mask) != 0 && (gb_get_IE() & mask) != 0)
             {
+                printf("PROCESSING INTERRUPT: %#02x", mask);
                 // disable global interrupts and the current interrupt
                 gameboy->cpu->IME = false;
                 gb_set_IF(mask, false);
@@ -121,7 +134,67 @@ void gb_set_IF(u8 interrupt_mask, bool value)
     databus_write8(INTERRUPT_REQUEST_ADDR,
         ((databus_read8(INTERRUPT_REQUEST_ADDR) & ~interrupt_mask) | (value? interrupt_mask : 0b00000000)));
 }
+void gb_set_IE(u8 interrupt_mask, bool value)
+{
+    databus_write8(INTERRUPT_ENABLED_ADDR,
+        ((databus_read8(INTERRUPT_ENABLED_ADDR) & ~interrupt_mask) | (value? interrupt_mask : 0b00000000)));
+}
 
+/*
+ * ---------------- TIMERS ----------------
+ */
+
+void gb_tick_timers(int lastCycles)
+{
+    // cycles before next DIV update
+    static int div_cycles = 0;
+    if((div_cycles += lastCycles) >= DIV_TIMER_RATE)
+    {
+        div_cycles %= DIV_TIMER_RATE;
+        u8 div_timer = databus_read8(DIV_TIMER_ADDR);
+        databus_write8(DIV_TIMER_ADDR, ++div_timer);
+        flag_set_carry(div_timer == 0x00); // timer has just overflown
+    }
+    
+    // cycles before next TIMA update
+    static int tima_cycles = 0;
+    if(tima_enabled() && ((tima_cycles += lastCycles) >= tima_get_rate()))
+    {
+        tima_cycles %= tima_get_rate();
+        u8 tima_next = databus_read8(TIMA_TIMER_ADDR) + 1;
+        if(tima_next == 0x00)
+        {
+            gameboy->cpu->IME = true;
+            gb_set_IF(INTERRUPT_TIMER_MASK, true);
+            gb_set_IE(INTERRUPT_TIMER_MASK, true); // enable the interrupt
+            databus_write8(TIMA_TIMER_ADDR, databus_read8(TIMA_MODULO_ADDR));
+        }
+        else
+            databus_write8(TIMA_TIMER_ADDR, tima_next);
+    }
+}
+
+bool tima_enabled()
+{
+    return (databus_read8(TIMA_CONTROL_ADDR) & 0x4) != 0;
+}
+int tima_get_rate()
+{
+    switch(databus_read8(TIMA_CONTROL_ADDR) & 0x03)
+    {
+        case 0x00:
+            return 1024;
+        case 0x01:
+            return 16;
+        case 0x02:
+            return 64;
+        case 0x03:
+            return 256;
+    }
+    
+    // this will never be reached since two bits can't be more than 3
+    return 256;
+}
 
 /*
  * Validate the 16-bit global rom checksum located at 0x14E in the rom header.
@@ -166,6 +239,19 @@ bool gb_system_load_map_bootrom(int map_addr, int bootrom_size)
     fread(gameboy->memory_map + map_addr, bootrom_size, 1, bootrom);
     
     fclose(bootrom);
+    return true;
+}
+
+bool gb_specialwrite(u16 address, u16 value)
+{
+    switch(address)
+    {
+        case DIV_TIMER_ADDR:
+            gameboy->memory_map[address] = 0x00;
+            break;
+        default:
+            return false;
+    }
     return true;
 }
 

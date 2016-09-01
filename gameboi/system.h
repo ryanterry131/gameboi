@@ -12,6 +12,12 @@
 #define GAMEBOY_MEMORY_SIZE         0x10000
 #define GAMEBOY_ROM_BANK_SIZE       0x4000
 
+#define DIV_TIMER_RATE              0x100
+
+#define DIV_TIMER_ADDR              0xFF04
+#define TIMA_TIMER_ADDR             0xFF05
+#define TIMA_MODULO_ADDR            0xFF06
+#define TIMA_CONTROL_ADDR           0xFF07
 #define INTERRUPT_REQUEST_ADDR      0xFF0F
 #define INTERRUPT_ENABLED_ADDR      0xFFFF
 
@@ -54,9 +60,15 @@ u8 gb_get_IF();
 u8 gb_get_IE();
 void gb_set_IF(u8 interrupt_mask, bool value);
 
+void gb_tick_timers(int lastCycles);
+bool tima_enabled();
+int tima_get_rate();
+
 bool gb_system_validate_rom_checksum();
 void gb_system_swap_bank(u8* bank_ptr, int bank);
 bool gb_system_load_map_bootrom(int map_addr, int bootrom_size);
+
+bool gb_specialwrite(u16 address, u16 value);
 
 void gb_system_shutdown();
 

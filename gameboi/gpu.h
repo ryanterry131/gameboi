@@ -9,6 +9,7 @@
 #ifndef gpu_h
 #define gpu_h
 
-void gb_gpu_initialize();
+void gpu_initialize();
+void gpu_tick();
 
 #endif /* gpu_h */

@@ -27,9 +27,9 @@ struct gb_cpu
     int cycles;
 };
 
-void gb_core_initialize();
+void cpu_initialize();
 
-void cpu_execute(u16 address);
+int cpu_execute(u16 address);
 bool cpu_execute_extended_instruction(u16 address, u8* cycles_add, u8* pc_add);
 
 // logic

@@ -8,7 +8,7 @@
 
 #include "audio.h"
 
-void gb_audio_initialize()
+void audio_initialize()
 {
     
 }

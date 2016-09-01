@@ -9,6 +9,6 @@
 #ifndef audio_h
 #define audio_h
 
-void gb_audio_initialize();
+void audio_initialize();
 
 #endif /* audio_h */

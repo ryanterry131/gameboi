@@ -24,11 +24,17 @@ u16 databus_read16(u16 address)
 }
 void databus_write8(u16 address, u8 value)
 {
-    gameboy->memory_map[address] = value;
+    if(!gb_specialwrite(address, value))
+    {
+        gameboy->memory_map[address] = value;
+    }
 }
 void databus_write16(u16 address, u16 value)
 {
-    *((u16*) (gameboy->memory_map + address)) = value;
+    if(!gb_specialwrite(address, value))
+    {
+        *((u16*) (gameboy->memory_map + address)) = value;
+    }
 }
 
 u16 databus_swap_endianess(u16 value)

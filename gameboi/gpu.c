@@ -8,7 +8,12 @@
 
 #include "gpu.h"
 
-void gb_gpu_initialize()
+void gpu_initialize()
+{
+    
+}
+
+void gpu_tick()
 {
     
 }

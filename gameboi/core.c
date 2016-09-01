@@ -21,7 +21,7 @@ static const char* instructions[] =
  * ================= CORE =================
 */
 
-void gb_core_initialize()
+void cpu_initialize()
 {
     gameboy->cpu->IME = false;
     gameboy->cpu->reg_PC = 0x0000;
@@ -33,7 +33,7 @@ void gb_core_initialize()
  * ================= CPU =================
 */
 
-void cpu_execute(u16 address)
+int cpu_execute(u16 address)
 {
     u8 instr = databus_read8(address);
     u8 cycles_add = 0;
@@ -255,8 +255,7 @@ void cpu_execute(u16 address)
         case 0xCB: // PREFIX CB
             if(!cpu_execute_extended_instruction(address + 1, &cycles_add, &pc_add))
             {
-                gameboy->stopped = true;
-                return;
+                return 0;
             }
             break;
         case 0xCD: // CALL a16
@@ -311,12 +310,13 @@ void cpu_execute(u16 address)
             break;
         default:
             printf("CPU: Operand %#02x at %#04x not implemented! Aborting...\n", instr, address);
-            gameboy->stopped = true;
-            return;
+            return 0;
     }
     
     cpu->cycles += cycles_add;
     cpu->reg_PC += pc_add;
+    
+    return cycles_add;
 }
 
 bool cpu_execute_extended_instruction(u16 address, u8* cycles_add, u8* pc_add)
@@ -359,7 +359,7 @@ u8 cpu_logic_rl_into(u8 value)
     bool carry = (value & 0b10000000) != 0;
     
     value <<= 1;
-    value |= (u8)carry;
+    value |= carry;
     flag_set_carry(carry);
     
     return value;
@@ -369,7 +369,7 @@ u8 cpu_logic_rr_into(u8 value)
     bool carry = (value & 0b00000001) != 0;
     
     value >>= 1;
-    value |= (((u8)carry) << 7);
+    value |= (carry << 7);
     flag_set_carry(carry);
     
     return value;
