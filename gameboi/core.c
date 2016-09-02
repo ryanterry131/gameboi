@@ -21,10 +21,10 @@ static const char* instructions[] =
  * ================= CORE =================
 */
 
-void cpu_initialize()
+void cpu_initialize(struct gb_cpu* cpu)
 {
-    gameboy->cpu->reg_PC = 0x0000;
-    gameboy->cpu->cycles = 0;
+    cpu->reg_PC = 0x0000;
+    cpu->cycles = 0;
 }
 
 
@@ -32,13 +32,11 @@ void cpu_initialize()
  * ================= CPU =================
 */
 
-int cpu_execute(u16 address)
+int cpu_execute(struct gb_cpu* cpu, u16 address)
 {
     u8 instr = databus_read8(address);
     u8 cycles_add = 0;
     u8 pc_add = 0;
-    
-    struct gb_cpu* cpu = gameboy->cpu;
     
     printf("INSTRUCTION: (%s) at %#04x\n", instructions[instr], address);
 
@@ -117,6 +115,19 @@ int cpu_execute(u16 address)
             pc_add = 1;
             cpu->reg_DE++;
             break;
+        case 0x15: // DEC D
+            cycles_add = 4;
+            pc_add = 1;
+            u8 sub_d = reg_get_high(&cpu->reg_DE) - 1;
+            reg_set_high(&cpu->reg_DE, sub_d);
+            // TODO: Modify half-carry flag properly
+            cpu_set_flags(sub_d == 0, true, FLAG_NO_MODIFY, FLAG_NO_MODIFY);
+            break;
+        case 0x16: // LD D,d8
+            cycles_add = 8;
+            pc_add = 2;
+            reg_set_high(&cpu->reg_DE, databus_read8(address + 1));
+            break;
         case 0x17: // RLA
             cycles_add = 4;
             pc_add = 1;
@@ -131,6 +142,14 @@ int cpu_execute(u16 address)
             cycles_add = 8;
             pc_add = 1;
             reg_set_high(&cpu->reg_AF, databus_read8(cpu->reg_DE));
+            break;
+        case 0x1D: // DEC E
+            cycles_add = 4;
+            pc_add = 1;
+            u8 sub_e = reg_get_low(&cpu->reg_DE) - 1;
+            reg_set_low(&cpu->reg_DE, sub_e);
+            // TODO: Modify half-carry flag properly
+            cpu_set_flags(sub_e == 0, true, FLAG_NO_MODIFY, FLAG_NO_MODIFY);
             break;
         case 0x1E: // LD E,d8
             cycles_add = 8;
@@ -161,6 +180,11 @@ int cpu_execute(u16 address)
             cycles_add = 8;
             pc_add = 1;
             cpu->reg_HL++;
+            break;
+        case 0x24: // INC H
+            cycles_add = 4;
+            pc_add = 1;
+            reg_set_high(&cpu->reg_HL, reg_get_high(&cpu->reg_HL) + 1);
             break;
         case 0x28: // JR Z,r8
             cycles_add = 8;
@@ -225,6 +249,19 @@ int cpu_execute(u16 address)
             pc_add = 1;
             reg_set_high(&cpu->reg_AF, reg_get_low(&cpu->reg_DE));
             break;
+        case 0x7C: // LD A,H
+            cycles_add = 4;
+            pc_add = 1;
+            reg_set_high(&cpu->reg_AF, reg_get_high(&cpu->reg_HL));
+            break;
+        case 0x90: // SUB B
+            cycles_add = 4;
+            pc_add = 1;
+            u8 sub_ab = reg_get_high(&cpu->reg_AF) - reg_get_high(&cpu->reg_BC);
+            reg_set_high(&cpu->reg_AF, sub_ab);
+            // TODO: Modify carries properly
+            cpu_set_flags(sub_ab == 0, true, FLAG_NO_MODIFY, FLAG_NO_MODIFY);
+            break;
         case 0xAF: // XOR A
             cycles_add = 4;
             pc_add = 1;
@@ -252,7 +289,7 @@ int cpu_execute(u16 address)
             cpu->reg_SP += 2;
             break;
         case 0xCB: // PREFIX CB
-            if(!cpu_execute_extended_instruction(address + 1, &cycles_add, &pc_add))
+            if(!cpu_execute_extended_instruction(cpu, address + 1, &cycles_add, &pc_add))
             {
                 return 0;
             }
@@ -318,12 +355,9 @@ int cpu_execute(u16 address)
     return cycles_add;
 }
 
-bool cpu_execute_extended_instruction(u16 address, u8* cycles_add, u8* pc_add)
+bool cpu_execute_extended_instruction(struct gb_cpu* cpu, u16 address, u8* cycles_add, u8* pc_add)
 {
     u8 instr = databus_read8(address);
-    
-    struct gb_cpu* cpu = gameboy->cpu;
-    
     printf("EXTENDED INSTRUCTION: (%#02x) at %#04x\n", /*instructions[0x00 + 0x100]*/instr, address);
     
     switch(instr)

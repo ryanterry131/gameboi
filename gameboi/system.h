@@ -27,14 +27,16 @@
 #define INTERRUPT_SERIAL_MASK       0b00001000
 #define INTERRUPT_CONTROLLER_MASK   0b00010000
 
-struct gb_cpu;
 struct gb_rom;
+struct gb_cpu;
+struct gb_gpu;
 #include "integers.h"
 
 struct gb_system
 {
-    struct gb_cpu* cpu;
     struct gb_rom* current_rom;
+    struct gb_cpu* cpu;
+    struct gb_gpu* gpu;
     
     bool IME; // interrupt master enable
     bool stopped;
@@ -69,7 +71,7 @@ bool gb_system_validate_rom_checksum();
 void gb_system_swap_bank(u8* bank_ptr, int bank);
 bool gb_system_load_map_bootrom(int map_addr, int bootrom_size);
 
-bool gb_specialwrite(u16 address, u16 value);
+bool gb_write_callback(u16 address, u16 value);
 
 void gb_system_shutdown();
 

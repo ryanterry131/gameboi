@@ -26,10 +26,10 @@ struct gb_cpu
     int cycles;
 };
 
-void cpu_initialize();
+void cpu_initialize(struct gb_cpu*);
 
-int cpu_execute(u16 address);
-bool cpu_execute_extended_instruction(u16 address, u8* cycles_add, u8* pc_add);
+int cpu_execute(struct gb_cpu*, u16 address);
+bool cpu_execute_extended_instruction(struct gb_cpu*, u16 address, u8* cycles_add, u8* pc_add);
 
 // logic
 u8 cpu_logic_rl_into(u8 value);

@@ -23,6 +23,7 @@ bool gb_system_boot()
 {
     gameboy = (struct gb_system*) malloc(sizeof(struct gb_system));
     gameboy->cpu = (struct gb_cpu*) malloc(sizeof(struct gb_cpu));
+    gameboy->gpu = (struct gb_gpu*) malloc(sizeof(struct gb_gpu));
 
     gameboy->stopped = false;
     
@@ -67,9 +68,9 @@ bool gb_system_boot()
         databus_write8(INTERRUPT_ENABLED_ADDR, 0x0000);
     }
     
-    cpu_initialize();
+    cpu_initialize(gameboy->cpu);
     audio_initialize();
-    gpu_initialize();
+    gpu_initialize(gameboy->gpu);
     
     return true;
 }
@@ -79,7 +80,7 @@ bool gb_system_boot()
 */
 void gb_system_loop()
 {
-    int lastCycles = cpu_execute(gameboy->cpu->reg_PC);
+    int lastCycles = cpu_execute(gameboy->cpu, gameboy->cpu->reg_PC);
     if(lastCycles == 0)
     {
         // an exception occurred executing the instruction; bail
@@ -90,7 +91,7 @@ void gb_system_loop()
     gb_service_interrupts();
     gb_tick_delayed_interrupts();
     
-    gpu_tick();
+    gpu_tick(gameboy->gpu, lastCycles);
     
     gb_tick_timers(lastCycles);
 }
@@ -253,7 +254,11 @@ bool gb_system_load_map_bootrom(int map_addr, int bootrom_size)
     return true;
 }
 
-bool gb_specialwrite(u16 address, u16 value)
+/*
+ * Callback for data bus writes for addresses that have special
+ * effects when written to (for example writing to DIV resets it)
+*/
+bool gb_write_callback(u16 address, u16 value)
 {
     switch(address)
     {
