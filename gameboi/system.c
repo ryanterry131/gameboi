@@ -115,7 +115,7 @@ void gb_service_interrupts()
         {
             if((gb_get_IF() & mask) != 0 && (gb_get_IE() & mask) != 0)
             {
-                printf("PROCESSING INTERRUPT: %#02x", mask);
+                printf("PROCESSING INTERRUPT: %#02x\n", mask);
                 // disable global interrupts and the current interrupt
                 gameboy->IME = false;
                 gb_set_IF(mask, false);
@@ -151,6 +151,12 @@ void gb_set_IE(u8 interrupt_mask, bool value)
     databus_write8(INTERRUPT_ENABLED_ADDR,
         ((databus_read8(INTERRUPT_ENABLED_ADDR) & ~interrupt_mask) | (value? interrupt_mask : 0b00000000)));
 }
+void gb_request_interrupt(u8 interrupt_mask)
+{
+    gameboy->IME = true; // global enable interrupts
+    gb_set_IF(interrupt_mask, true); // set the interrupt flag
+    gb_set_IE(interrupt_mask, true); // enable the interrupt
+}
 
 /*
  * ---------------- TIMERS ----------------
@@ -162,6 +168,7 @@ void gb_tick_timers(int lastCycles)
     static int div_cycles = 0;
     if((div_cycles += lastCycles) >= DIV_TIMER_RATE)
     {
+        // carry overflown cycles into the next loop
         div_cycles %= DIV_TIMER_RATE;
         u8 div_timer = databus_read8(DIV_TIMER_ADDR);
         databus_write8(DIV_TIMER_ADDR, ++div_timer);
@@ -172,13 +179,13 @@ void gb_tick_timers(int lastCycles)
     static int tima_cycles = 0;
     if(tima_enabled() && ((tima_cycles += lastCycles) >= tima_get_rate()))
     {
+        // carry overflown cycles into the next loop
         tima_cycles %= tima_get_rate();
         u8 tima_next = databus_read8(TIMA_TIMER_ADDR) + 1;
+        // timer will overflow
         if(tima_next == 0x00)
         {
-            gameboy->IME = true;
-            gb_set_IF(INTERRUPT_TIMER_MASK, true);
-            gb_set_IE(INTERRUPT_TIMER_MASK, true); // enable the interrupt
+            gb_request_interrupt(INTERRUPT_TIMER_MASK);
             databus_write8(TIMA_TIMER_ADDR, databus_read8(TIMA_MODULO_ADDR));
         }
         else
@@ -186,6 +193,11 @@ void gb_tick_timers(int lastCycles)
     }
 }
 
+void tima_set_enabled(bool enabled)
+{
+    databus_write8(TIMA_CONTROL_ADDR,
+        ((enabled << 2) | (databus_read8(TIMA_CONTROL_ADDR) & ~0x04)));
+}
 bool tima_enabled()
 {
     return (databus_read8(TIMA_CONTROL_ADDR) & 0x4) != 0;
@@ -201,11 +213,9 @@ int tima_get_rate()
         case 0x02:
             return 64;
         case 0x03:
+        default:
             return 256;
     }
-    
-    // this will never be reached since two bits can't be more than 3
-    return 256;
 }
 
 /*
@@ -273,14 +283,13 @@ bool gb_write_callback(u16 address, u16 value)
 
 void gb_system_shutdown()
 {
-    printf("Shutting down...\n");
-
+    //gb_core_shutdown();
+    //gb_gpu_shutdown();
+    //gb_audio_shutdown();
+    
     free(gameboy->cpu);
+    free(gameboy->gpu);
     free(gameboy->current_rom);
     free(gameboy->memory_map);
     free(gameboy);
-    
-    //gb_core_shutdown();
-    //gb_audio_shutdown();
-    //gb_renderer_shutdown();
 }

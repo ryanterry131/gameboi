@@ -10,8 +10,8 @@
 
 #include "system.h"
 
-int main(int argc, const char * argv[]) {
-    
+int main(int argc, const char * argv[])
+{    
     if(!gb_system_boot())
     {
         printf("Failed to boot! Aborting...\n");
@@ -23,6 +23,7 @@ int main(int argc, const char * argv[]) {
         gb_system_loop();
     }
     
+    printf("Shutting down...\n");
     gb_system_shutdown();
     
     return 0;

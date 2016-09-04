@@ -8,81 +8,156 @@
 
 #include "gpu.h"
 #include "databus.h"
+#include "system.h"
 
 #include <stdio.h> // for printf
 #include <math.h> // for floor
 
+enum gpu_mode
+{
+    GPU_MODE_HBLANK,
+    GPU_MODE_VBLANK,
+    GPU_MODE_OAM,
+    GPU_MODE_TRANSFER
+};
+
+
 void gpu_initialize(struct gb_gpu* gpu)
 {
-    gpu->display_mode = 0x02;
-    databus_write8(LCDC_Y_ADDR, 0x00);
+    {
+        // initialize special registers
+        databus_write8(LCDC_ADDR, 0x00);
+        databus_write8(STAT_ADDR, 0x02);
+        databus_write8(SCY_ADDR, 0x00);
+        databus_write8(SCX_ADDR, 0x00);
+        databus_write8(LY_ADDR, 0x00);
+    }
 }
 
 void gpu_tick(struct gb_gpu* gpu, int lastCycles)
 {
-    if(gpu_display_enabled())
+    if(lcdc_get_bit(LCDC_DISPLAY_ENABLED))
     {
         gpu->display_mode_cycles += lastCycles;
-        switch(gpu->display_mode)
+        switch(gpu_get_mode())
         {
             case 0x00: // H-Blank
-                // TODO: this code has an error in that it runs h-blank prior to v-blank at the start of v-blank (too many cycles taken up in v-blank)
+            {
                 if(gpu->display_mode_cycles >= 204)
                 {
                     // carry overflown cycles into next display mode
                     gpu->display_mode_cycles %= 204;
                     
-                    if(gpu_nextline(gpu) >= 144)
+                    if(gpu_nextline(gpu) == 144)
                     {
                         // enter v-blank after 144 lines
-                        gpu->display_mode = 0x01;
+                        gpu_set_mode(GPU_MODE_VBLANK);
+                        gb_request_interrupt(INTERRUPT_VBLANK_MASK);
+                        if((databus_read8(STAT_ADDR) & 0b00010000) != 0)
+                        {
+                            gb_request_interrupt(INTERRUPT_STAT_MASK);
+                        }
                     }
                     else
                     {
                         // no v-blank yet; jump to the next line instead.
-                        gpu->display_mode = 0x02;
+                        gpu_set_mode(GPU_MODE_OAM);
+                        if((databus_read8(STAT_ADDR) & 0b00100000) != 0)
+                        {
+                            gb_request_interrupt(INTERRUPT_STAT_MASK);
+                        }
                     }
                 }
                 break;
+            }
             case 0x01: // V-Blank
+            {
                 // checks if we've passed a multiple of 456 (scanline cycle)
-                if((floor(gpu->display_mode_cycles / 456) + 144) > databus_read8(LCDC_Y_ADDR))
+                if((floor(gpu->display_mode_cycles / 456) + 144) > databus_read8(LY_ADDR))
                 {
                     if(gpu_nextline(gpu) > 153)
                     {
                         // reset from line 0
-                        databus_write8(LCDC_Y_ADDR, 0x00);
+                        databus_write8(LY_ADDR, 0x00);
                         gpu->display_mode_cycles %= 4560;
-                        gpu->display_mode = 0x02;
+                        gpu_set_mode(GPU_MODE_OAM);
+                        if((databus_read8(STAT_ADDR) & 0b00100000) != 0)
+                        {
+                            gb_request_interrupt(INTERRUPT_STAT_MASK);
+                        }
                     }
                 }
                 break;
+            }
             case 0x02: // OAM access
+            {
                 if(gpu->display_mode_cycles >= 80)
                 {
                     gpu->display_mode_cycles %= 80;
-                    gpu->display_mode = 0x03;
+                    gpu_set_mode(GPU_MODE_TRANSFER);
                 }
                 break;
+            }
             case 0x03: // Data transfer to LCD driver
+            {
                 if(gpu->display_mode_cycles >= 172)
                 {
                     gpu->display_mode_cycles %= 172;
-                    gpu->display_mode = 0x00;
+                    gpu_set_mode(GPU_MODE_HBLANK);
+                    if((databus_read8(STAT_ADDR) & 0b00001000) != 0)
+                    {
+                        gb_request_interrupt(INTERRUPT_STAT_MASK);
+                    }
                 }
                 break;
+            }
         }
     }
 }
 
 u8 gpu_nextline(struct gb_gpu* gpu)
 {
-    u8 nextLine = databus_read8(LCDC_Y_ADDR) + 1;
-    databus_write8(LCDC_Y_ADDR, nextLine);
+    u8 nextLine = databus_read8(LY_ADDR) + 1;
+    databus_write8(LY_ADDR, nextLine);
+    gpu_compare_ly();
     return nextLine;
 }
 
-bool gpu_display_enabled()
+void gpu_compare_ly()
 {
-    return (databus_read8(LCDC_ADDR) & LCDC_ENABLED_MASK) != 0;
+    if(databus_read8(LY_ADDR) == databus_read8(LYC_ADDR))
+    {
+        databus_write8(STAT_ADDR, (databus_read8(STAT_ADDR) & ~0x04) | (0x04));
+        if((databus_read8(STAT_ADDR) & 0b01000000) != 0)
+        {
+            gb_request_interrupt(INTERRUPT_STAT_MASK);
+        }
+    }
+    else
+    {
+        databus_write8(STAT_ADDR, databus_read8(STAT_ADDR) & ~0x04);
+    }
+}
+
+bool lcdc_get_bit(u8 bit)
+{
+    return (databus_read8(LCDC_ADDR) & bit) != 0;
+}
+void lcdc_set_bit(u8 bit, bool value)
+{
+    databus_write8(LCDC_ADDR, ((value << (bit - 1)) | (databus_read8(LCDC_ADDR) & ~bit)));
+    if(bit == 7 && !value)
+    {
+        // disabling display resets LY
+        databus_write8(LY_ADDR, 0x00);
+    }
+}
+
+u8 gpu_get_mode()
+{
+    return databus_read8(STAT_ADDR) & 0x03;
+}
+void gpu_set_mode(u8 mode)
+{
+    databus_write8(STAT_ADDR, (databus_read8(STAT_ADDR) & 0b11111100) | mode);
 }

@@ -22,7 +22,7 @@
 #define INTERRUPT_ENABLED_ADDR      0xFFFF
 
 #define INTERRUPT_VBLANK_MASK       0b00000001
-#define INTERRUPT_LCDC_MASK         0b00000010
+#define INTERRUPT_STAT_MASK         0b00000010
 #define INTERRUPT_TIMER_MASK        0b00000100
 #define INTERRUPT_SERIAL_MASK       0b00001000
 #define INTERRUPT_CONTROLLER_MASK   0b00010000
@@ -62,8 +62,10 @@ void gb_service_interrupts();
 u8 gb_get_IF();
 u8 gb_get_IE();
 void gb_set_IF(u8 interrupt_mask, bool value);
+void gb_request_interrupt(u8 interrupt_mask);
 
 void gb_tick_timers(int lastCycles);
+void tima_set_enabled(bool enabled);
 bool tima_enabled();
 int tima_get_rate();
 

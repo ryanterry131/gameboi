@@ -14,7 +14,7 @@
 
 
 static const char* instructions[] =
-#include "instructions.h"
+#include "instruction_names.h"
 
 
 /*
