@@ -264,6 +264,20 @@ bool gb_system_load_map_bootrom(int map_addr, int bootrom_size)
     return true;
 }
 
+void gb_execute_dma_transfer(u8 offset)
+{
+    if(offset < 0x00)
+    {
+        offset = 0x00;
+    }
+    if(offset > 0x5F)
+    {
+        offset = 0x5F;
+    }
+    u16 src = 0x8000 + (offset * 0x100);
+    memcpy(gameboy->memory_map + 0xFE00, gameboy->memory_map + src, 160);
+}
+
 /*
  * Callback for data bus writes for addresses that have special
  * effects when written to (for example writing to DIV resets it)
@@ -274,6 +288,10 @@ bool gb_write_callback(u16 address, u16 value)
     {
         case DIV_TIMER_ADDR:
             gameboy->memory_map[address] = 0x00;
+            break;
+        case DMA_ADDR:
+            gb_execute_dma_transfer((u8)value);
+            gameboy->memory_map[address] = value;
             break;
         default:
             return false;

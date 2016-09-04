@@ -43,8 +43,8 @@ void gpu_tick(struct gb_gpu* gpu, int lastCycles);
 
 u8 gpu_nextline(struct gb_gpu* gpu);
 
-bool lcdc_get_bit(u8 bit);
-void lcdc_set_bit(u8 bit, bool value);
+bool lcdc_get_bit(u8 mask);
+void lcdc_set_bit(u8 mask, u8 shift, bool value);
 u8 gpu_get_mode();
 void gpu_set_mode(u8 mode);
 void gpu_compare_ly();

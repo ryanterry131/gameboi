@@ -72,6 +72,7 @@ int tima_get_rate();
 bool gb_system_validate_rom_checksum();
 void gb_system_swap_bank(u8* bank_ptr, int bank);
 bool gb_system_load_map_bootrom(int map_addr, int bootrom_size);
+void gb_execute_dma_transfer(u8 offset);
 
 bool gb_write_callback(u16 address, u16 value);
 

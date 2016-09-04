@@ -139,14 +139,14 @@ void gpu_compare_ly()
     }
 }
 
-bool lcdc_get_bit(u8 bit)
+bool lcdc_get_bit(u8 mask)
 {
-    return (databus_read8(LCDC_ADDR) & bit) != 0;
+    return (databus_read8(LCDC_ADDR) & mask) != 0;
 }
-void lcdc_set_bit(u8 bit, bool value)
+void lcdc_set_bit(u8 mask, u8 shift, bool value)
 {
-    databus_write8(LCDC_ADDR, ((value << (bit - 1)) | (databus_read8(LCDC_ADDR) & ~bit)));
-    if(bit == 7 && !value)
+    databus_write8(LCDC_ADDR, ((value << shift) | (databus_read8(LCDC_ADDR) & ~mask)));
+    if(mask == 7 && !value)
     {
         // disabling display resets LY
         databus_write8(LY_ADDR, 0x00);

@@ -471,7 +471,7 @@ void cpu_set_flags(signed char z, signed char n, signed char h, signed char c)
 }
 void flag_set_zero(bool set)
 {
-    reg_set_low(&gameboy->cpu->reg_AF, ((((u8)set) << FLAG_ZERO_SHIFT) | (reg_get_low(&gameboy->cpu->reg_AF) & ~FLAG_ZERO_MASK)));
+    reg_set_low(&gameboy->cpu->reg_AF, ((set << FLAG_ZERO_SHIFT) | (reg_get_low(&gameboy->cpu->reg_AF) & ~FLAG_ZERO_MASK)));
 }
 bool flag_get_zero()
 {
@@ -480,7 +480,7 @@ bool flag_get_zero()
 
 void flag_set_negative(bool set)
 {
-    reg_set_low(&gameboy->cpu->reg_AF, ((((u8)set) << FLAG_NEGATIVE_SHIFT) | (reg_get_low(&gameboy->cpu->reg_AF) & ~FLAG_NEGATIVE_MASK)));
+    reg_set_low(&gameboy->cpu->reg_AF, ((set << FLAG_NEGATIVE_SHIFT) | (reg_get_low(&gameboy->cpu->reg_AF) & ~FLAG_NEGATIVE_MASK)));
 }
 bool flag_get_negative()
 {
@@ -489,7 +489,7 @@ bool flag_get_negative()
 
 void flag_set_halfcarry(bool set)
 {
-    reg_set_low(&gameboy->cpu->reg_AF, ((((u8)set) << FLAG_HALFCARRY_SHIFT) | (reg_get_low(&gameboy->cpu->reg_AF) & ~FLAG_HALFCARRY_MASK)));
+    reg_set_low(&gameboy->cpu->reg_AF, ((set << FLAG_HALFCARRY_SHIFT) | (reg_get_low(&gameboy->cpu->reg_AF) & ~FLAG_HALFCARRY_MASK)));
 }
 bool flag_get_halfcarry()
 {
@@ -498,7 +498,7 @@ bool flag_get_halfcarry()
 
 void flag_set_carry(bool set)
 {
-    reg_set_low(&gameboy->cpu->reg_AF, ((((u8)set) << FLAG_CARRY_SHIFT) | (reg_get_low(&gameboy->cpu->reg_AF) & ~FLAG_CARRY_MASK)));
+    reg_set_low(&gameboy->cpu->reg_AF, ((set << FLAG_CARRY_SHIFT) | (reg_get_low(&gameboy->cpu->reg_AF) & ~FLAG_CARRY_MASK)));
 }
 bool flag_get_carry()
 {
