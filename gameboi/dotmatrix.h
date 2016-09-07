@@ -13,12 +13,12 @@
 #define LCD_HEIGHT      144
 #define LCD_SCALE       1
 
-
-struct sfRenderWindow;
+#include <GLFW/glfw3.h> // for glfw
 
 struct gb_dotmatrix
 {
-    struct sfRenderWindow* window;
+    // The main GLFW window for rendering
+    GLFWwindow* renderWindow;
 };
 
 void lcd_initialize(struct gb_dotmatrix* lcd);

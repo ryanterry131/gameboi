@@ -11,43 +11,29 @@
 #include <stdio.h> // for printf
 #include <stdlib.h> // for malloc
 
-#include <SFML/Graphics.h> // for sfRenderWindow
-
 void lcd_initialize(struct gb_dotmatrix* lcd)
 {
-    sfVideoMode videoMode = {LCD_WIDTH, LCD_HEIGHT, 2};
-    sfContextSettings settings = {1, 1, 1, 1, 0, 0};
-    lcd->window = sfRenderWindow_create(videoMode, "Gameboi Emulator", 0, &settings);
+    lcd->renderWindow = glfwCreateWindow(160, 144, "Gameboi", NULL, NULL);
+    glfwMakeContextCurrent(lcd->renderWindow);
+    // make the screen render white by default
+    glClearColor(1.0F, 1.0F, 1.0F, 1.0F);
 }
 
 void lcd_teardown(struct gb_dotmatrix* lcd)
 {
-    free(lcd->window);
+    //free(lcd->renderWindow); // glfw deallocs windows for you
     free(lcd);
 }
 
 void lcd_tick(struct gb_dotmatrix* lcd)
 {
-    sfEvent event;
-    while(sfRenderWindow_pollEvent(lcd->window, &event))
-    {
-        if(event.type == sfEvtClosed)
-        {
-            // If we clicked the close button, close this window.
-            printf("Gameboi has been quit!\n");
-            sfRenderWindow_close(lcd->window);
-        }
-    }
 }
 
 void lcd_drawFrame(struct gb_dotmatrix* lcd)
 {
-    sfColor white = {0xFF, 0xFF, 0xFF, 0xFF};
-    sfRenderWindow_clear(lcd->window, white);
-    
-    lcd_update_framebuffer(lcd);
-    
-    sfRenderWindow_display(lcd->window);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glfwSwapBuffers(lcd->renderWindow);
+    glfwPollEvents();
 }
 
 void lcd_update_framebuffer(struct gb_dotmatrix* lcd)
