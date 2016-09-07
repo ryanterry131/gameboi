@@ -62,14 +62,15 @@ struct gb_rom
     byte* rawBytes;
 };
 
-bool gb_rom_load(const char* path);
-void gb_rom_print_header();
-bool gb_rom_validate_checksum();
+bool rom_load(struct gb_rom** rom_ptr, const char* path);
+void rom_close(struct gb_rom* rom);
+void rom_print_header(struct gb_rom* rom);
+bool rom_validate_checksum(struct gb_rom* rom);
 
-void gb_rom_read8(u8* destination, const byte* src, int offset);
-void gb_rom_read16(u16* destination, const byte* src, int offset);
-void gb_rom_read32(u32* destination, const byte* src, int offset);
-void gb_rom_readChars(char* destination, const byte* src, int offset, int bytes);
-void gb_rom_readBytes(byte* destination, const byte* src, int offset, int bytes);
+void rom_read8(struct gb_rom* rom, u8* destination, int offset);
+void rom_read16(struct gb_rom* rom, u16* destination, int offset);
+void rom_read32(struct gb_rom* rom, u32* destination, int offset);
+void rom_readChars(struct gb_rom* rom, char* destination, int offset, int bytes);
+void rom_readBytes(struct gb_rom* rom, byte* destination, int offset, int bytes);
 
 #endif /* rom_h */

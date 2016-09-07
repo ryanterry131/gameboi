@@ -11,6 +11,7 @@
 #include "core.h"
 #include "audio.h"
 #include "gpu.h"
+#include "dotmatrix.h"
 #include "databus.h"
 
 #include <stdlib.h> // for malloc
@@ -24,6 +25,7 @@ bool gb_system_boot()
     gameboy = (struct gb_system*) malloc(sizeof(struct gb_system));
     gameboy->cpu = (struct gb_cpu*) malloc(sizeof(struct gb_cpu));
     gameboy->gpu = (struct gb_gpu*) malloc(sizeof(struct gb_gpu));
+    gameboy->lcd = (struct gb_dotmatrix*) malloc(sizeof(struct gb_dotmatrix));
 
     gameboy->stopped = false;
     
@@ -41,14 +43,14 @@ bool gb_system_boot()
     }
 
     const char* path = "/Users/ryan/Downloads/blue.gb";
-    if(!gb_rom_load(path) || !gb_system_validate_rom_checksum())
+    if(!rom_load(&gameboy->current_rom, path) || !gb_system_validate_rom_checksum())
     {
         printf("Failed to load rom!\n");
         return false;
     }
     
-    gb_system_swap_bank(gameboy->rom_bank0, 0);
-    gb_system_swap_bank(gameboy->rom_bank1, 1);
+    gb_system_map_bank(gameboy->rom_bank0, 0);
+    gb_system_map_bank(gameboy->rom_bank1, 1);
     
     if(!gb_system_load_map_bootrom(0x0000, 0x100))
     {
@@ -69,10 +71,23 @@ bool gb_system_boot()
     }
     
     cpu_initialize(gameboy->cpu);
-    audio_initialize();
     gpu_initialize(gameboy->gpu);
+    lcd_initialize(gameboy->lcd);
+    audio_initialize();
     
     return true;
+}
+
+void gb_system_shutdown()
+{
+    audio_teardown();
+    lcd_teardown(gameboy->lcd);
+    gpu_teardown(gameboy->gpu);
+    cpu_teardown(gameboy->cpu);
+    rom_close(gameboy->current_rom);
+    
+    free(gameboy->memory_map);
+    free(gameboy);
 }
 
 /*
@@ -91,6 +106,7 @@ void gb_system_loop()
     gb_service_interrupts();
     gb_tick_delayed_interrupts();
     
+    lcd_tick(gameboy->lcd);
     gpu_tick(gameboy->gpu, lastCycles);
     
     gb_tick_timers(lastCycles);
@@ -242,7 +258,7 @@ bool gb_system_validate_rom_checksum()
     return checksum == gameboy->current_rom->header.globalChecksum;
 }
 
-void gb_system_swap_bank(u8* bank_ptr, int bank)
+void gb_system_map_bank(u8* bank_ptr, int bank)
 {
     memcpy(bank_ptr, gameboy->current_rom->rawBytes + (bank * GAMEBOY_ROM_BANK_SIZE), GAMEBOY_ROM_BANK_SIZE);
 }
@@ -297,17 +313,4 @@ bool gb_write_callback(u16 address, u16 value)
             return false;
     }
     return true;
-}
-
-void gb_system_shutdown()
-{
-    //gb_core_shutdown();
-    //gb_gpu_shutdown();
-    //gb_audio_shutdown();
-    
-    free(gameboy->cpu);
-    free(gameboy->gpu);
-    free(gameboy->current_rom);
-    free(gameboy->memory_map);
-    free(gameboy);
 }

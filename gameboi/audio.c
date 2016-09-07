@@ -12,3 +12,8 @@ void audio_initialize()
 {
     
 }
+
+void audio_teardown()
+{
+    
+}

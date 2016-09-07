@@ -11,6 +11,7 @@
 #include "databus.h"
 
 #include <stdio.h> // for printf
+#include <stdlib.h> // for free
 
 
 static const char* instructions[] =
@@ -18,8 +19,8 @@ static const char* instructions[] =
 
 
 /*
- * ================= CORE =================
-*/
+ * ================= CPU =================
+ */
 
 void cpu_initialize(struct gb_cpu* cpu)
 {
@@ -27,10 +28,10 @@ void cpu_initialize(struct gb_cpu* cpu)
     cpu->cycles = 0;
 }
 
-
-/*
- * ================= CPU =================
-*/
+void cpu_teardown(struct gb_cpu* cpu)
+{
+    free(cpu);
+}
 
 int cpu_execute(struct gb_cpu* cpu, u16 address)
 {

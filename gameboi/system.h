@@ -30,6 +30,7 @@
 struct gb_rom;
 struct gb_cpu;
 struct gb_gpu;
+struct gb_dotmatrix;
 #include "integers.h"
 
 struct gb_system
@@ -37,6 +38,7 @@ struct gb_system
     struct gb_rom* current_rom;
     struct gb_cpu* cpu;
     struct gb_gpu* gpu;
+    struct gb_dotmatrix* lcd;
     
     bool IME; // interrupt master enable
     bool stopped;
@@ -70,7 +72,7 @@ bool tima_enabled();
 int tima_get_rate();
 
 bool gb_system_validate_rom_checksum();
-void gb_system_swap_bank(u8* bank_ptr, int bank);
+void gb_system_map_bank(u8* bank_ptr, int bank);
 bool gb_system_load_map_bootrom(int map_addr, int bootrom_size);
 void gb_execute_dma_transfer(u8 offset);
 

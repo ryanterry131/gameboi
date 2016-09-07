@@ -7,11 +7,14 @@
 //
 
 #include "gpu.h"
+#include "dotmatrix.h"
 #include "databus.h"
 #include "system.h"
 
 #include <stdio.h> // for printf
+#include <stdlib.h> // for free
 #include <math.h> // for floor
+
 
 enum gpu_mode
 {
@@ -32,6 +35,11 @@ void gpu_initialize(struct gb_gpu* gpu)
         databus_write8(SCX_ADDR, 0x00);
         databus_write8(LY_ADDR, 0x00);
     }
+}
+
+void gpu_teardown(struct gb_gpu* gpu)
+{
+    free(gpu);
 }
 
 void gpu_tick(struct gb_gpu* gpu, int lastCycles)
@@ -77,6 +85,7 @@ void gpu_tick(struct gb_gpu* gpu, int lastCycles)
                 {
                     if(gpu_nextline(gpu) > 153)
                     {
+                        lcd_drawFrame(gameboy->lcd);
                         // reset from line 0
                         databus_write8(LY_ADDR, 0x00);
                         gpu->display_mode_cycles %= 4560;

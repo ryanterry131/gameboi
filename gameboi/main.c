@@ -6,9 +6,11 @@
 //  Copyright © 2016 Byteandahalf. All rights reserved.
 //
 
-#include <stdio.h> // for printf
-
 #include "system.h"
+#include "dotmatrix.h"
+
+#include <stdio.h> // for printf
+#include <SFML/Graphics/RenderWindow.h> // for sfRenderWindow
 
 int main(int argc, const char * argv[])
 {    
@@ -18,7 +20,7 @@ int main(int argc, const char * argv[])
         return 1;
     }
     
-    while(!gameboy->stopped)
+    while(sfRenderWindow_isOpen(gameboy->lcd->window) && !gameboy->stopped)
     {
         gb_system_loop();
     }

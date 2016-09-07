@@ -10,5 +10,6 @@
 #define audio_h
 
 void audio_initialize();
+void audio_teardown();
 
 #endif /* audio_h */

@@ -33,14 +33,16 @@
 
 #include "integers.h"
 
+
 struct gb_gpu
 {
     int display_mode_cycles;
 };
 
 void gpu_initialize(struct gb_gpu* gpu);
-void gpu_tick(struct gb_gpu* gpu, int lastCycles);
+void gpu_teardown(struct gb_gpu* gpu);
 
+void gpu_tick(struct gb_gpu* gpu, int lastCycles);
 u8 gpu_nextline(struct gb_gpu* gpu);
 
 bool lcdc_get_bit(u8 mask);

@@ -27,6 +27,7 @@ struct gb_cpu
 };
 
 void cpu_initialize(struct gb_cpu*);
+void cpu_teardown(struct gb_cpu*);
 
 int cpu_execute(struct gb_cpu*, u16 address);
 bool cpu_execute_extended_instruction(struct gb_cpu*, u16 address, u8* cycles_add, u8* pc_add);

@@ -15,47 +15,47 @@
 #include <sys/stat.h> // for stat
 
 
-bool gb_rom_load(const char* path)
+bool rom_load(struct gb_rom** rom_ptr, const char* path)
 {
-    FILE* rom = fopen(path, "rb");
+    FILE* rom_file = fopen(path, "rb");
     
-    if(!rom)
+    if(!rom_file)
     {
         printf("Invalid ROM!\n");
         return false;
     }
     
-    gameboy->current_rom = (struct gb_rom*) malloc(sizeof(struct gb_rom));
+    *rom_ptr = (struct gb_rom*) malloc(sizeof(struct gb_rom));
     
-    gameboy->current_rom->path = (char*) path;
+    (*rom_ptr)->path = (char*) path;
     struct stat s;
     stat(path, &s);
-    gameboy->current_rom->rom_size = s.st_size;
+    (*rom_ptr)->rom_size = s.st_size;
     
     gameboy->current_rom->rawBytes = (byte*) malloc(gameboy->current_rom->rom_size);
-    fread(gameboy->current_rom->rawBytes, gameboy->current_rom->rom_size, 1, rom);
+    fread(gameboy->current_rom->rawBytes, gameboy->current_rom->rom_size, 1, rom_file);
     
     {
         // setup rom header
-        struct rom_header* header = &gameboy->current_rom->header;
-        gb_rom_read32(&header->entryCode, gameboy->current_rom->rawBytes, 0x100);
-        gb_rom_readBytes(header->nintendoLogo, gameboy->current_rom->rawBytes, 0x104, 0x30);
-        gb_rom_readChars(header->gameTitle, gameboy->current_rom->rawBytes, 0x134, 0x10);
-        gb_rom_read16(&header->newLicensee, gameboy->current_rom->rawBytes, 0x144);
-        gb_rom_read8(&header->sgbFunction, gameboy->current_rom->rawBytes, 0x146);
-        gb_rom_read8(&header->cartridgeType, gameboy->current_rom->rawBytes, 0x147);
-        gb_rom_read8(&header->ROMsize, gameboy->current_rom->rawBytes, 0x148);
-        gb_rom_read8(&header->RAMsize, gameboy->current_rom->rawBytes, 0x149);
-        gb_rom_read8(&header->international, gameboy->current_rom->rawBytes, 0x14A);
-        gb_rom_read8(&header->oldLicensee, gameboy->current_rom->rawBytes, 0x14B);
-        gb_rom_read8(&header->versionCode, gameboy->current_rom->rawBytes, 0x14C);
-        gb_rom_read8(&header->headerChecksum, gameboy->current_rom->rawBytes, 0x14D);
-        gb_rom_read16(&header->globalChecksum, gameboy->current_rom->rawBytes, 0x14E);
+        struct rom_header* header = &((*rom_ptr)->header);
+        rom_read32(*rom_ptr, &header->entryCode, 0x100);
+        rom_readBytes(*rom_ptr, header->nintendoLogo, 0x104, 0x30);
+        rom_readChars(*rom_ptr, header->gameTitle, 0x134, 0x10);
+        rom_read16(*rom_ptr, &header->newLicensee, 0x144);
+        rom_read8(*rom_ptr, &header->sgbFunction, 0x146);
+        rom_read8(*rom_ptr, &header->cartridgeType, 0x147);
+        rom_read8(*rom_ptr, &header->ROMsize, 0x148);
+        rom_read8(*rom_ptr, &header->RAMsize, 0x149);
+        rom_read8(*rom_ptr, &header->international, 0x14A);
+        rom_read8(*rom_ptr, &header->oldLicensee, 0x14B);
+        rom_read8(*rom_ptr, &header->versionCode, 0x14C);
+        rom_read8(*rom_ptr, &header->headerChecksum, 0x14D);
+        rom_read16(*rom_ptr, &header->globalChecksum, 0x14E);
     }
     
-    gb_rom_print_header();
+    rom_print_header(*rom_ptr);
     
-    if(!gb_rom_validate_checksum())
+    if(!rom_validate_checksum(*rom_ptr))
     {
         printf("ERROR: Invalid checksum in ROM header! Aborting...\n");
         return false;
@@ -66,60 +66,66 @@ bool gb_rom_load(const char* path)
     return true;
 }
 
-void gb_rom_print_header()
+void rom_close(struct gb_rom* rom)
 {
-    printf("Entry Code:%#08x\n", gameboy->current_rom->header.entryCode);
+    free(rom->rawBytes);
+    free(rom);
+}
+
+void rom_print_header(struct gb_rom* rom)
+{
+    printf("Entry Code:%#08x\n", rom->header.entryCode);
     printf("Logo:");
     for(int i = 0; i <= 0x30; i++)
     {
-        printf("%02X", gameboy->current_rom->header.nintendoLogo[i]);
+        printf("%02X", rom->header.nintendoLogo[i]);
         if(i == 0x30)
         {
             // flush
             printf("\n");
         }
     }
-    printf("Title:%s\n", gameboy->current_rom->header.gameTitle);
-    printf("New Licensee:%#04x\n", gameboy->current_rom->header.newLicensee);
-    printf("Use SGB:%#01x\n", gameboy->current_rom->header.sgbFunction);
-    printf("Cartridge Type:%#01x\n", gameboy->current_rom->header.cartridgeType);
-    printf("ROM size:%#01x\n", gameboy->current_rom->header.ROMsize);
-    printf("RAM size:%#01x\n", gameboy->current_rom->header.RAMsize);
-    printf("International:%#01x\n", gameboy->current_rom->header.international);
-    printf("Old Licensee:%#01x\n", gameboy->current_rom->header.oldLicensee);
-    printf("Version Code:%#01x\n", gameboy->current_rom->header.versionCode);
-    printf("Header Checksum:%#01x\n", gameboy->current_rom->header.headerChecksum);
-    printf("Global Checksum:%#02x\n", gameboy->current_rom->header.globalChecksum);
+    printf("Title:%s\n", rom->header.gameTitle);
+    printf("New Licensee:%#04x\n", rom->header.newLicensee);
+    printf("Use SGB:%#01x\n", rom->header.sgbFunction);
+    printf("Cartridge Type:%#01x\n", rom->header.cartridgeType);
+    printf("ROM size:%#01x\n", rom->header.ROMsize);
+    printf("RAM size:%#01x\n", rom->header.RAMsize);
+    printf("International:%#01x\n", rom->header.international);
+    printf("Old Licensee:%#01x\n", rom->header.oldLicensee);
+    printf("Version Code:%#01x\n", rom->header.versionCode);
+    printf("Header Checksum:%#01x\n", rom->header.headerChecksum);
+    printf("Global Checksum:%#02x\n", rom->header.globalChecksum);
 }
 
-bool gb_rom_validate_checksum()
+bool rom_validate_checksum(struct gb_rom* rom)
 {
     int checksum = 0;
     for(int i = 0x134; i <= 0x14C; i++)
     {
-        checksum = checksum - gameboy->current_rom->rawBytes[i] - 1;
+        checksum = checksum - rom->rawBytes[i] - 1;
     }
     
-    return ((checksum & 0xFF) == gameboy->current_rom->header.headerChecksum);
+    return ((checksum & 0xFF) == rom->header.headerChecksum);
 }
 
-void gb_rom_read8(u8* destination, const byte* src, int offset)
+void rom_read8(struct gb_rom* rom, u8* destination, int offset)
 {
-    *destination = src[offset];
+    *destination = rom->rawBytes[offset];
 }
-void gb_rom_read16(u16* destination, const byte* src, int offset)
+void rom_read16(struct gb_rom* rom, u16* destination, int offset)
 {
-    memcpy(destination, src + offset, sizeof(*destination));
+    memcpy(destination, rom->rawBytes + offset, sizeof(*destination));
 }
-void gb_rom_read32(u32* destination, const byte* src, int offset)
+void rom_read32(struct gb_rom* rom, u32* destination, int offset)
 {
-    memcpy(destination, src + offset, sizeof(*destination));
+    memcpy(destination, rom->rawBytes + offset, sizeof(*destination));
 }
-void gb_rom_readChars(char* destination, const byte* src, int offset, int bytes)
+void rom_readChars(struct gb_rom* rom, char* destination, int offset, int bytes)
 {
-    memcpy(destination, src + offset, bytes);
+    memcpy(destination, rom->rawBytes + offset, bytes);
 }
-void gb_rom_readBytes(byte* destination, const byte* src, int offset, int bytes)
+void rom_readBytes(struct gb_rom* rom, byte* destination, int offset, int bytes)
 {
-    memcpy(destination, src + offset, bytes);
+    memcpy(destination, rom->rawBytes + offset, bytes);
 }
