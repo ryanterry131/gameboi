@@ -16,14 +16,11 @@ void renderer_initialize()
 {
     initialize_shaders();
     
-    vertex vertices[6] =
+    vertex vertices[4] =
     {
         {-1.0F, -1.0F, 0.0F},
         {1.0F, -1.0F, 0.0F},
         {-1.0F, 1.0F, 0.0F},
-
-        {-1.0F, 1.0F, 0.0F},
-        {1.0F, -1.0F, 0.0F},
         {1.0F, 1.0F, 0.0F}
     };
     lcd_mesh = create_mesh(vertices, sizeof(vertices)/sizeof(vertex));
@@ -38,5 +35,5 @@ void renderer_teardown()
 void renderer_render()
 {
     bind_lcd_shaders();
-    draw_mesh(&lcd_mesh);
+    draw_mesh(&lcd_mesh, GL_TRIANGLE_STRIP);
 }

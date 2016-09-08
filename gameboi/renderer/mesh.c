@@ -34,11 +34,11 @@ void destroy_mesh(struct mesh* _mesh)
     glDeleteVertexArrays(1, &_mesh->vertex_array);
 }
 
-void draw_mesh(struct mesh* _mesh)
+void draw_mesh(struct mesh* _mesh, GLenum render_mode)
 {
     glBindVertexArray(_mesh->vertex_array);
     
-    glDrawArrays(GL_TRIANGLES, 0, _mesh->vertex_count);
+    glDrawArrays(render_mode, 0, _mesh->vertex_count);
     
     glBindVertexArray(0);
 }

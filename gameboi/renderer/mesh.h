@@ -25,6 +25,6 @@ struct mesh
 
 struct mesh create_mesh(vertex* vertices, GLuint vertex_count);
 void destroy_mesh(struct mesh* _mesh);
-void draw_mesh(struct mesh* _mesh);
+void draw_mesh(struct mesh* _mesh, GLenum render_mode);
 
 #endif /* mesh_h */
