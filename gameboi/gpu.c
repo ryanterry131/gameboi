@@ -85,7 +85,7 @@ void gpu_tick(struct gb_gpu* gpu, int lastCycles)
                 {
                     if(gpu_nextline(gpu) > 153)
                     {
-                        lcd_drawFrame(gameboy->lcd);
+                        lcd_draw(gameboy->lcd);
                         // reset from line 0
                         databus_write8(LY_ADDR, 0x00);
                         gpu->display_mode_cycles %= 4560;

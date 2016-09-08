@@ -6,6 +6,7 @@
 //  Copyright © 2016 Byteandahalf. All rights reserved.
 //
 
+#include "renderer/lcd_renderer.h"
 #include "dotmatrix.h"
 
 #include <stdio.h> // for printf
@@ -13,30 +14,33 @@
 
 void lcd_initialize(struct gb_dotmatrix* lcd)
 {
-    lcd->renderWindow = glfwCreateWindow(160, 144, "Gameboi", NULL, NULL);
+    lcd->renderWindow = glfwCreateWindow(LCD_WIDTH, LCD_HEIGHT, "Gameboi", NULL, NULL);
     glfwMakeContextCurrent(lcd->renderWindow);
-    // make the screen render white by default
-    glClearColor(1.0F, 1.0F, 1.0F, 1.0F);
+    
+    renderer_initialize();
 }
 
 void lcd_teardown(struct gb_dotmatrix* lcd)
 {
+    renderer_teardown();
     //free(lcd->renderWindow); // glfw deallocs windows for you
     free(lcd);
 }
 
 void lcd_tick(struct gb_dotmatrix* lcd)
 {
-}
-
-void lcd_drawFrame(struct gb_dotmatrix* lcd)
-{
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glfwSwapBuffers(lcd->renderWindow);
+    lcd_display(lcd);
     glfwPollEvents();
 }
 
-void lcd_update_framebuffer(struct gb_dotmatrix* lcd)
+void lcd_display(struct gb_dotmatrix* lcd)
 {
-    
+    // displays the rendered screen drawn into the back buffer
+    renderer_render();
+    glfwSwapBuffers(lcd->renderWindow);
+}
+
+void lcd_draw(struct gb_dotmatrix* lcd)
+{
+    // draws into the back buffer, and calls lcd_display() to swap to the front buffer.
 }
