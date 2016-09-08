@@ -11,4 +11,4 @@
     * Cycles through 4 ppu modes  
     * Draws a blank white screen  
   
-This project requires the [SFML Library](http://sfml-dev.org) to build and run.
+This project requires the [GLFW library](http://www.glfw.org/) to build.
