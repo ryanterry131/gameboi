@@ -54,15 +54,7 @@ bool rom_load(struct gb_rom** rom_ptr, const char* path)
     }
     
     rom_print_header(*rom_ptr);
-    
-    if(!rom_validate_checksum(*rom_ptr))
-    {
-        printf("ERROR: Invalid checksum in ROM header! Aborting...\n");
-        return false;
-    }
-    
-    printf("Checksum OK!\n");
-    
+
     return true;
 }
 

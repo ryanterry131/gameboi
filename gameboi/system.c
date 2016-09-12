@@ -267,6 +267,13 @@ void gb_system_map_bank(u8* bank_ptr, int bank)
     memcpy(bank_ptr, gameboy->current_rom->rawBytes + (bank * GAMEBOY_ROM_BANK_SIZE), GAMEBOY_ROM_BANK_SIZE);
 }
 
+void gb_system_disable_bootrom()
+{
+    // after the bootrom completes execution, it writes 1 to 0xFF50
+    // this remaps the first 256 bytes from the game rom into bank 0
+    memcpy(gameboy->rom_bank0, gameboy->current_rom->rawBytes, 0x100);
+}
+
 bool gb_system_load_map_bootrom(int map_addr, int bootrom_size)
 {
     const char* bootrom_path = "/Users/ryan/Downloads/bootrom.bin";
@@ -313,6 +320,13 @@ bool gb_write_callback(u16 address, u16 value)
             gb_execute_dma_transfer((u8)value);
             gameboy->memory_map[address] = value;
             break;
+        case BOOTROM_DISABLE_ADDR:
+            if(value == 0x01)
+            {
+                // disable bootrom
+                gameboy->in_bootrom = false;
+                gb_system_disable_bootrom();
+            }
         default:
             return false;
     }

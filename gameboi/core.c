@@ -17,6 +17,8 @@
 static const char* instructions[] =
 #include "instruction_names.h"
 
+#define __CPU_SLOW_DEBUG_
+
 
 /*
  * ================= CPU =================
@@ -39,7 +41,9 @@ int cpu_execute(struct gb_cpu* cpu, u16 address)
     u8 cycles_add = 0;
     u8 pc_add = 0;
     
+#ifdef __CPU_SLOW_DEBUG_
     printf("INSTRUCTION: (%s) at %#04x\n", instructions[instr], address);
+#endif
     
     switch(instr)
     {
@@ -245,6 +249,11 @@ int cpu_execute(struct gb_cpu* cpu, u16 address)
             pc_add = 1;
             databus_write8(cpu->reg_HL, reg_get_high(&cpu->reg_AF));
             break;
+        case 0x78: // LD A,B
+            cycles_add = 4;
+            pc_add = 1;
+            reg_set_high(&cpu->reg_AF, reg_get_high(&cpu->reg_BC));
+            break;
         case 0x7B: // LD A,E
             cycles_add = 4;
             pc_add = 1;
@@ -254,6 +263,16 @@ int cpu_execute(struct gb_cpu* cpu, u16 address)
             cycles_add = 4;
             pc_add = 1;
             reg_set_high(&cpu->reg_AF, reg_get_high(&cpu->reg_HL));
+            break;
+        case 0x7D: // LD A,L
+            cycles_add = 4;
+            pc_add = 1;
+            reg_set_high(&cpu->reg_AF, reg_get_low(&cpu->reg_HL));
+            break;
+        case 0x86: // ADD A,(HL)
+            cycles_add = 8;
+            pc_add = 1;
+            reg_set_high(&cpu->reg_AF, reg_get_high(&cpu->reg_AF) + databus_read8(cpu->reg_HL));
             break;
         case 0x90: // SUB B
             cycles_add = 4;
@@ -267,6 +286,12 @@ int cpu_execute(struct gb_cpu* cpu, u16 address)
             cycles_add = 4;
             pc_add = 1;
             reg_set_high(&cpu->reg_AF, 0);
+            break;
+        case 0xBE: // CP (HL)
+            cycles_add = 8;
+            pc_add = 1;
+            u8 cp_hl = reg_get_high(&cpu->reg_AF) - databus_read8(cpu->reg_HL);
+            cpu_set_flags(cp_hl == 0, true, FLAG_NO_MODIFY, FLAG_NO_MODIFY);
             break;
         case 0xC1: // POP BC
             cycles_add = 12;
@@ -341,9 +366,9 @@ int cpu_execute(struct gb_cpu* cpu, u16 address)
         case 0xFE: // CP d8
             cycles_add = 4;
             pc_add = 2;
-            signed char result = reg_get_high(&cpu->reg_AF) - databus_read8(address + 1);
+            u8 cp_d8 = reg_get_high(&cpu->reg_AF) - databus_read8(address + 1);
             // TODO: Modify half-carry and carry flags properly
-            cpu_set_flags(result == 0, true, FLAG_NO_MODIFY, FLAG_NO_MODIFY);
+            cpu_set_flags(cp_d8 == 0, true, FLAG_NO_MODIFY, FLAG_NO_MODIFY);
             break;
         default:
             printf("CPU: Opcode %#02x at %#04x not implemented! Aborting...\n", instr, address);
@@ -359,7 +384,10 @@ int cpu_execute(struct gb_cpu* cpu, u16 address)
 bool cpu_execute_extended_instruction(struct gb_cpu* cpu, u16 address, u8* cycles_add, u8* pc_add)
 {
     u8 instr = databus_read8(address);
+    
+#ifdef __CPU_SLOW_DEBUG_
     printf("EXTENDED INSTRUCTION: (%#02x) at %#04x\n", /*instructions[0x00 + 0x100]*/instr, address);
+#endif
     
     switch(instr)
     {
