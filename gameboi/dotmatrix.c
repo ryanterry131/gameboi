@@ -29,18 +29,12 @@ void lcd_teardown(struct gb_dotmatrix* lcd)
 
 void lcd_tick(struct gb_dotmatrix* lcd)
 {
-    lcd_display(lcd);
     glfwPollEvents();
 }
 
-void lcd_display(struct gb_dotmatrix* lcd)
+void lcd_refresh(struct gb_dotmatrix* lcd)
 {
     // displays the rendered screen drawn into the back buffer
     renderer_render();
     glfwSwapBuffers(lcd->renderWindow);
-}
-
-void lcd_draw(struct gb_dotmatrix* lcd)
-{
-    // draws into the back buffer, and calls lcd_display() to swap to the front buffer.
 }

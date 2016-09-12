@@ -52,6 +52,7 @@ bool gb_system_boot()
     gb_system_map_bank(gameboy->rom_bank0, 0);
     gb_system_map_bank(gameboy->rom_bank1, 1);
     
+    gameboy->in_bootrom = true;
     if(!gb_system_load_map_bootrom(0x0000, 0x100))
     {
         printf("Internal bootrom not yet implemented! Aborting...\n");
@@ -123,7 +124,7 @@ void gb_tick_delayed_interrupts()
 
 void gb_service_interrupts()
 {
-    if(gameboy->IME)
+    if(gameboy->IME && !gameboy->in_bootrom)
     {
         u16 int_vector_addr = 0x0040;
         // scan through each possible interrupt and service if the bit is set
@@ -169,9 +170,12 @@ void gb_set_IE(u8 interrupt_mask, bool value)
 }
 void gb_request_interrupt(u8 interrupt_mask)
 {
-    gameboy->IME = true; // global enable interrupts
-    gb_set_IF(interrupt_mask, true); // set the interrupt flag
-    gb_set_IE(interrupt_mask, true); // enable the interrupt
+    if(!gameboy->in_bootrom)
+    {
+        gameboy->IME = true; // global enable interrupts
+        gb_set_IF(interrupt_mask, true); // set the interrupt flag
+        gb_set_IE(interrupt_mask, true); // enable the interrupt
+    }
 }
 
 /*

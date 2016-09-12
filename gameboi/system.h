@@ -42,6 +42,7 @@ struct gb_system
     
     bool IME; // interrupt master enable
     bool stopped;
+    bool in_bootrom;
     
     u8* memory_map;
     u8* rom_bank0;      // 0x0000

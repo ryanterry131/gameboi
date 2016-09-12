@@ -25,7 +25,6 @@ void lcd_initialize(struct gb_dotmatrix* lcd);
 void lcd_teardown(struct gb_dotmatrix* lcd);
 
 void lcd_tick(struct gb_dotmatrix* lcd);
-void lcd_display(struct gb_dotmatrix* lcd);
-void lcd_draw(struct gb_dotmatrix* lcd);
+void lcd_refresh(struct gb_dotmatrix* lcd);
 
 #endif /* dotmatrix_h */

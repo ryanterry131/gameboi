@@ -40,7 +40,7 @@ int cpu_execute(struct gb_cpu* cpu, u16 address)
     u8 pc_add = 0;
     
     printf("INSTRUCTION: (%s) at %#04x\n", instructions[instr], address);
-
+    
     switch(instr)
     {
         case 0x00: // NOP
@@ -346,7 +346,7 @@ int cpu_execute(struct gb_cpu* cpu, u16 address)
             cpu_set_flags(result == 0, true, FLAG_NO_MODIFY, FLAG_NO_MODIFY);
             break;
         default:
-            printf("CPU: Operand %#02x at %#04x not implemented! Aborting...\n", instr, address);
+            printf("CPU: Opcode %#02x at %#04x not implemented! Aborting...\n", instr, address);
             return 0;
     }
     
@@ -374,7 +374,7 @@ bool cpu_execute_extended_instruction(struct gb_cpu* cpu, u16 address, u8* cycle
             flag_set_zero(!(reg_get_high(&cpu->reg_HL) & 0b10000000));
             break;
         default:
-            printf("CPU: Extended Operand %#02x at %#04x not implemented! Aborting...\n", instr, address);
+            printf("CPU: Extended Opcode %#02x at %#04x not implemented! Aborting...\n", instr, address);
             return false;
     }
     
