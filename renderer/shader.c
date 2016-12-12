@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 
+
 #include "shader_sources.h"
 
 static struct shader vertex_shader, fragment_shader;

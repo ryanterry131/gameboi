@@ -11,6 +11,9 @@
 
 #include "integers.h"
 
+#include <stddef.h>
+
+
 struct rom_header
 {
     // gameboy rom header begins at $0100
